@@ -1,4 +1,5 @@
 const nameEl = document.getElementById("name");
+const dayEl = document.getElementById("day");
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
 const saveBtn = document.getElementById("save");
@@ -17,8 +18,6 @@ async function sendToContent(message) {
   const tab = await getActiveTab();
   if (!tab?.id) throw new Error("No active tab found.");
 
-  // If the content script hasn't loaded yet on this tab, this can fail.
-  // In that case we can inject content.js manually as a fallback.
   try {
     return await chrome.tabs.sendMessage(tab.id, message);
   } catch (e) {
@@ -31,19 +30,24 @@ async function sendToContent(message) {
   }
 }
 
-async function loadSavedName() {
-  const { savedName } = await chrome.storage.sync.get(["savedName"]);
+// Loads both name and day from storage
+async function loadSavedData() {
+  const { savedName, savedDay } = await chrome.storage.sync.get(["savedName", "savedDay"]);
   if (savedName) nameEl.value = savedName;
+  if (savedDay) dayEl.value = savedDay;
 }
 
 runBtn.addEventListener("click", async () => {
   try {
     setStatus("Running...");
     const name = nameEl.value?.trim();
+    const day = dayEl.value; 
+
     if (!name) return setStatus("Enter a name first.");
 
-    const resp = await sendToContent({ type: "RUN_AUTOMATION", name });
-    setStatus(resp?.ok ? "Started. Check the page console for logs." : `Failed to start: ${resp?.error || "unknown"}`);
+    // Pass both name and day to the content script
+    const resp = await sendToContent({ type: "RUN_AUTOMATION", name, day });
+    setStatus(resp?.ok ? "Started. Check the page console." : `Failed: ${resp?.error}`);
   } catch (e) {
     setStatus(`Error: ${e.message || e}`);
   }
@@ -51,17 +55,18 @@ runBtn.addEventListener("click", async () => {
 
 saveBtn.addEventListener("click", async () => {
   const name = nameEl.value?.trim() || "";
-  await chrome.storage.sync.set({ savedName: name });
-  setStatus("Saved.");
+  const day = dayEl.value;
+  await chrome.storage.sync.set({ savedName: name, savedDay: day });
+  setStatus("Saved preferences.");
 });
 
 stopBtn.addEventListener("click", async () => {
   try {
     const resp = await sendToContent({ type: "STOP_AUTOMATION" });
-    setStatus(resp?.ok ? "Stop requested." : `Stop failed: ${resp?.error || "unknown"}`);
+    setStatus(resp?.ok ? "Stop requested." : `Stop failed: ${resp?.error}`);
   } catch (e) {
     setStatus(`Error: ${e.message || e}`);
   }
 });
 
-loadSavedName();
+loadSavedData();

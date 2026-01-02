@@ -68,11 +68,31 @@
             font-size: 11px;
             color: #6b7280;
         }
+
+        select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background: white;
+        }
     </style>
 </head>
 
 <body>
-    <label for="name">Student name to search</label>
+    <label for="day">Day of the week</label>
+    <select id="day">
+        <option value="Monday">Monday</option>
+        <option value="Tuesday">Tuesday</option>
+        <option value="Wednesday">Wednesday</option>
+        <option value="Thursday">Thursday</option>
+        <option value="Friday">Friday</option>
+        <option value="Saturday">Saturday</option>
+        <option value="Sunday">Sunday</option>
+    </select>
+
+    <label for="name" style="margin-top: 10px;">Student name to search</label>
     <input id="name" placeholder='e.g. "Ahmed, Hamza"' />
 
     <button id="run" class="primary">Run on this tab</button>
