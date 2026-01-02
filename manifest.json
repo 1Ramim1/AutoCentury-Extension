@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Assignment Student Picker",
+  "version": "1.0.0",
+  "description": "Automates: Create Assignment -> For Students -> Search -> Select first -> Next",
+  "action": {
+    "default_title": "Student Picker",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
