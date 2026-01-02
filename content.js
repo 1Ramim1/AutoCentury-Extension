@@ -10,48 +10,27 @@
   const SEARCH_INPUT_SEL = '[data-testid="search-input"]';
   const SEARCH_BTN_SEL = '[data-testid="search-btn"]';
   const NEXT_BTN_SEL = '[data-testid="next-button"]';
-  
   const ASSIGNMENT_NAME_SEL = '[data-testid="text-input-assignmentName"]';
   const SUBJECT_SELECT_SEL = 'select#select.cds-select';
   const START_DATE_SEL = '[data-testid="date-picker-startDate"]';
   const DUE_DATE_SEL = '[data-testid="date-picker-dueDate"]';
   const FINAL_CREATE_BTN_SEL = '[data-testid="teacher-assignment-modal-create-button"]';
   const MODAL_SEL = '[role="dialog"]';
+  const TABLE_ROW_SEL = 'tbody tr.rc-table-row-clickable';
 
-  // --- Helper Functions ---
-  function sleep(ms, signal) {
-    return new Promise((res, rej) => {
-      const t = setTimeout(res, ms);
-      if (signal) {
-        signal.addEventListener("abort", () => {
-          clearTimeout(t);
-          rej(new Error("Aborted"));
-        }, { once: true });
-      }
-    });
-  }
+  // --- Fast Helper Functions ---
+  
+  // Minimal sleep only for UI animations (e.g., modals sliding in)
+  const quickWait = (ms) => new Promise(res => setTimeout(res, ms));
 
-  function pointerTap(el) {
-    if (!el) return;
-    el.scrollIntoView({ block: "center", inline: "center" });
-    const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2;
-    const y = r.top + r.height / 2;
-    const opts = { bubbles: true, cancelable: true, view: window, clientX: x, clientY: y };
-    el.dispatchEvent(new PointerEvent("pointerdown", { ...opts, pointerType: "mouse", button: 0 }));
-    el.dispatchEvent(new MouseEvent("mousedown", { ...opts, button: 0 }));
-    el.dispatchEvent(new PointerEvent("pointerup", { ...opts, pointerType: "mouse", button: 0 }));
-    el.dispatchEvent(new MouseEvent("mouseup", { ...opts, button: 0 }));
-    el.dispatchEvent(new MouseEvent("click", { ...opts, button: 0 }));
-  }
-
-  async function waitFor(selector, timeoutMs = 15000, root = document, signal) {
+  async function waitFor(selector, timeoutMs = 10000, root = document, signal) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       if (signal?.aborted) throw new Error("Aborted");
       const el = root.querySelector(selector);
-      if (el) return el;
-      await sleep(100, signal);
+      // Ensure element is not only present but visible/interactable
+      if (el && el.getBoundingClientRect().width > 0) return el;
+      await new Promise(r => requestAnimationFrame(r)); // Sync with browser frames for max speed
     }
     throw new Error(`Timeout: ${selector}`);
   }
@@ -65,97 +44,83 @@
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function selectSubjectByText(selectEl, subjectToMatch) {
-    const options = Array.from(selectEl.options);
-    const targetOption = options.find(opt => opt.text.trim() === subjectToMatch);
-    if (targetOption) {
-      selectEl.value = targetOption.value;
-      selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-      console.log(`🎯 Subject matched: ${subjectToMatch}`);
-    }
+  function pointerTap(el) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const opts = { bubbles: true, clientX: r.left + r.width/2, clientY: r.top + r.height/2 };
+    el.dispatchEvent(new PointerEvent("pointerdown", { ...opts, pointerType: "mouse" }));
+    el.dispatchEvent(new MouseEvent("mousedown", opts));
+    el.dispatchEvent(new PointerEvent("pointerup", { ...opts, pointerType: "mouse" }));
+    el.dispatchEvent(new MouseEvent("mouseup", opts));
+    el.dispatchEvent(new MouseEvent("click", opts));
   }
 
-  function formatDateForInput(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  // --- Core Automation Logic ---
+  // --- Automation Logic ---
   async function runAutomation(name, day, subject, duration, signal) {
-    console.log("▶️ Running automation...");
+    console.time("AutomationDuration");
 
-    // 1) Open Assignment Flow
-    (await waitFor(CREATE_SEL, 15000, document, signal)).click();
-    await sleep(500, signal);
-    (await waitFor(STUDENTS_SEL, 15000, document, signal)).click();
+    // 1) Open Flow
+    const createBtn = await waitFor(CREATE_SEL, 10000, document, signal);
+    createBtn.click();
+    
+    const studentsBtn = await waitFor(STUDENTS_SEL, 10000, document, signal);
+    studentsBtn.click();
 
-    // 2) Modal Student Search
-    const modal = await waitFor(MODAL_SEL, 15000, document, signal);
-    // Targeting specifically the search box in the modal to avoid dashboard search bar
-    const searchInput = await waitFor('.rc-search-box--large [data-testid="search-input"]', 15000, modal, signal);
+    // 2) Search Student
+    const modal = await waitFor(MODAL_SEL, 10000, document, signal);
+    const searchInput = await waitFor('.rc-search-box--large ' + SEARCH_INPUT_SEL, 5000, modal, signal);
     setNativeValue(searchInput, name);
     
-    const modalSearchBtn = modal.querySelector('.rc-search-box--large [data-testid="search-btn"]');
-    if (modalSearchBtn) pointerTap(modalSearchBtn);
-    await sleep(3000, signal); 
+    const searchBtn = modal.querySelector('.rc-search-box--large ' + SEARCH_BTN_SEL);
+    if (searchBtn) searchBtn.click();
 
-    // 3) Select First Result
-    const rows = await waitFor('tbody tr.rc-table-row-clickable', 15000, modal, signal);
-    const clickTarget = rows.querySelector("label.cds-checkbox__input-label") || rows;
-    pointerTap(clickTarget);
+    // 3) WAIT FOR RESULTS (Smart Polling)
+    // Instead of sleep(3000), we wait until the first row matches our search name
+    const firstRow = await waitFor(TABLE_ROW_SEL, 8000, modal, signal);
+    
+    // 4) Select & Next (Immediate)
+    const checkbox = firstRow.querySelector("label.cds-checkbox__input-label") || firstRow;
+    pointerTap(checkbox);
+    
+    const nextBtn = await waitFor(NEXT_BTN_SEL, 5000, modal, signal);
+    nextBtn.click();
 
-    // 4) Go to Settings
-    const nextBtn = modal.querySelector(NEXT_BTN_SEL) || (await waitFor(NEXT_BTN_SEL, 15000, document, signal));
-    pointerTap(nextBtn);
-
-    // 5) Fill Settings Screen
-    console.log("➡️ Filling Assignment Settings...");
-    await sleep(2000, signal);
-
-    // Set Name
-    const nameInput = await waitFor(ASSIGNMENT_NAME_SEL, 15000, document, signal);
+    // 5) Fill Settings (Immediate as soon as inputs exist)
+    const nameInput = await waitFor(ASSIGNMENT_NAME_SEL, 8000, document, signal);
     setNativeValue(nameInput, `${name} ${day} Homework`);
 
-    // Set Subject
-    try {
-        const subjectSelect = await waitFor(SUBJECT_SELECT_SEL, 5000, document, signal);
-        selectSubjectByText(subjectSelect, subject);
-    } catch (e) { console.warn("Subject dropdown not found."); }
+    const subSelect = await waitFor(SUBJECT_SELECT_SEL, 5000, document, signal);
+    const targetOpt = Array.from(subSelect.options).find(o => o.text.trim() === subject);
+    if (targetOpt) {
+      subSelect.value = targetOpt.value;
+      subSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
 
-    // Set Dates
-    const startInput = await waitFor(START_DATE_SEL, 5000, document, signal);
-    const dueInput = await waitFor(DUE_DATE_SEL, 5000, document, signal);
+    // Dates
+    const startInput = await waitFor(START_DATE_SEL, 2000, document, signal);
+    const dueInput = await waitFor(DUE_DATE_SEL, 2000, document, signal);
+    
+    const d = new Date();
+    const fmt = (date) => date.toISOString().split('T')[0];
+    setNativeValue(startInput, fmt(d));
+    
+    d.setDate(d.getDate() + (parseInt(duration) || 0));
+    setNativeValue(dueInput, fmt(d));
 
-    const today = new Date();
-    const dueDate = new Date();
-    const daysToAdd = parseInt(duration, 10) || 0;
-    dueDate.setDate(today.getDate() + daysToAdd);
+    // 6) Final Create
+    const finish = await waitFor(FINAL_CREATE_BTN_SEL, 5000, document, signal);
+    finish.click();
 
-    setNativeValue(startInput, formatDateForInput(today));
-    setNativeValue(dueInput, formatDateForInput(dueDate));
-
-    // 6) Click Final Create
-    console.log("🚀 Clicking Create...");
-    await sleep(1000, signal);
-    const finalCreateBtn = await waitFor(FINAL_CREATE_BTN_SEL, 5000, document, signal);
-    pointerTap(finalCreateBtn);
-
-    console.log("✅ Assignment Created Successfully.");
+    console.timeEnd("AutomationDuration");
+    console.log("🚀 Done!");
   }
 
-  // --- Message Listener ---
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type === "RUN_AUTOMATION") {
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === "RUN_AUTOMATION") {
       if (abortController) abortController.abort();
       abortController = new AbortController();
       runAutomation(msg.name, msg.day, msg.subject, msg.duration, abortController.signal)
-        .catch(e => { if (e.message !== "Aborted") console.error(e); });
-      sendResponse({ ok: true });
-    } else if (msg?.type === "STOP_AUTOMATION") {
-      if (abortController) abortController.abort();
-      abortController = null;
+        .catch(e => console.warn("Streamlined run stopped or failed:", e.message));
       sendResponse({ ok: true });
     }
     return true;
