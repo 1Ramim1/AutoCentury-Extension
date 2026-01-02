@@ -1,0 +1,17 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# dependencies (if you have them)
+node_modules/
+
+# build output (if you have one)
+dist/
+build/
+
+# env files
+.env
+.env.*
