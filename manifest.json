@@ -2,19 +2,12 @@
   "manifest_version": 3,
   "name": "Assignment Student Picker",
   "version": "1.0.0",
-  "description": "Automates: Create Assignment -> For Students -> Search -> Select first -> Next",
+  "permissions": ["activeTab", "scripting", "storage", "clipboardWrite"],
+  "host_permissions": [
+    "https://app.century.tech/*",
+    "https://tutor.tnx.dev/*"
+  ],
   "action": {
-    "default_title": "Student Picker",
     "default_popup": "popup.html"
-  },
-  "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["https://app.century.tech/*"],
-  "content_scripts": [
-    {
-      "matches": ["https://*.century.tech/*"],
-      "js": ["content.js"],
-      "all_frames": true,
-      "match_about_blank": true
-    }
-  ]
+  }
 }
