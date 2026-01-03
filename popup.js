@@ -4,30 +4,51 @@ fields.forEach(id => els[id] = document.getElementById(id));
 
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
+const saveBtn = document.getElementById("save"); // Get the save button
+
+// --- PERSISTENCE LOGIC ---
 
 async function saveAllData() {
   const data = {};
   fields.forEach(id => data[`saved_${id}`] = els[id].value);
+  // Using sync so your settings follow your Chrome profile
   await chrome.storage.sync.set(data);
+  console.log("Data saved automatically");
 }
 
 async function loadSavedData() {
   const keys = fields.map(id => `saved_${id}`);
-  const data = await chrome.storage.get(keys);
+  // FIXED: Changed chrome.storage.get to chrome.storage.sync.get
+  const data = await chrome.storage.sync.get(keys);
+  
   fields.forEach(id => { 
-    if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`]; 
+    if (data[`saved_${id}`] !== undefined) {
+      els[id].value = data[`saved_${id}`];
+    }
   });
 }
 
+// Add listeners to every input to save as you type
 fields.forEach(id => {
   els[id].addEventListener("change", saveAllData);
   els[id].addEventListener("input", saveAllData);
 });
 
+// Manual save button feedback
+saveBtn.addEventListener("click", async () => {
+  await saveAllData();
+  statusEl.textContent = "Settings saved!";
+  statusEl.style.color = "green";
+  setTimeout(() => { statusEl.textContent = ""; }, 2000);
+});
+
+// --- AUTOMATION LOGIC ---
+
 runBtn.addEventListener("click", async () => {
   const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
   if (lines.length === 0) {
     statusEl.textContent = "Error: No data found.";
+    statusEl.style.color = "red";
     return;
   }
 
@@ -48,6 +69,7 @@ runBtn.addEventListener("click", async () => {
     dueTime: els.dueTime.value
   };
 
+  // Save the run-state to local (volatile) storage
   await chrome.storage.local.set({ 
     "activeQueue": students, 
     "batchSettings": settings,
@@ -59,9 +81,8 @@ runBtn.addEventListener("click", async () => {
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
-      chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(err => {
-          // If content script isn't ready, the page reload will trigger resumeBatch automatically
-          console.log("Waiting for page interaction...");
+      chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
+          console.log("Tab not ready. Automation will start on next page load.");
       });
   }
 });
@@ -79,4 +100,5 @@ document.getElementById("stop").addEventListener("click", async () => {
     statusEl.style.color = "red";
 });
 
+// Initialize on open
 loadSavedData();
