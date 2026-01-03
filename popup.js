@@ -1,101 +1,44 @@
-const nameEl = document.getElementById("name");
-const dayEl = document.getElementById("day");
-const subjectEl = document.getElementById("subject");
-const topicEl = document.getElementById("topic");
-const durationEl = document.getElementById("duration");
+const fields = ["name", "day", "subject", "topic", "startDate", "startTime", "dueDate", "dueTime"];
+const els = {};
+fields.forEach(id => els[id] = document.getElementById(id));
+
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
 const saveBtn = document.getElementById("save");
 const stopBtn = document.getElementById("stop");
 
-function setStatus(msg) {
-  statusEl.textContent = msg || "";
-}
+function setStatus(msg) { statusEl.textContent = msg || ""; }
 
-// --- PERSISTENCE LOGIC ---
 async function saveAllData() {
-  const data = {
-    savedName: nameEl.value?.trim() || "",
-    savedDay: dayEl.value,
-    savedSubject: subjectEl.value,
-    savedTopic: topicEl.value?.trim() || "",
-    savedDuration: durationEl.value
-  };
+  const data = {};
+  fields.forEach(id => data[`saved_${id}`] = els[id].value);
   await chrome.storage.sync.set(data);
-  console.log("Data auto-saved");
 }
 
 async function loadSavedData() {
-  const data = await chrome.storage.sync.get([
-    "savedName", 
-    "savedDay", 
-    "savedSubject", 
-    "savedTopic", 
-    "savedDuration"
-  ]);
-  
-  if (data.savedName !== undefined) nameEl.value = data.savedName;
-  if (data.savedDay !== undefined) dayEl.value = data.savedDay;
-  if (data.savedSubject !== undefined) subjectEl.value = data.savedSubject;
-  if (data.savedTopic !== undefined) topicEl.value = data.savedTopic;
-  if (data.savedDuration !== undefined) durationEl.value = data.savedDuration;
+  const keys = fields.map(id => `saved_${id}`);
+  const data = await chrome.storage.sync.get(keys);
+  fields.forEach(id => {
+    if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`];
+  });
 }
 
-[nameEl, dayEl, subjectEl, topicEl, durationEl].forEach(el => {
-  el.addEventListener("change", saveAllData);
-  el.addEventListener("input", saveAllData); 
+fields.forEach(id => {
+  els[id].addEventListener("change", saveAllData);
+  els[id].addEventListener("input", saveAllData);
 });
-
-// --- MESSAGING LOGIC ---
-async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
-}
-
-async function sendToContent(message) {
-  const tab = await getActiveTab();
-  if (!tab?.id) throw new Error("No active tab found.");
-
-  try {
-    return await chrome.tabs.sendMessage(tab.id, message);
-  } catch (e) {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["content.js"]
-    });
-    return await chrome.tabs.sendMessage(tab.id, message);
-  }
-}
 
 runBtn.addEventListener("click", async () => {
   try {
     setStatus("Running...");
-    const resp = await sendToContent({ 
-      type: "RUN_AUTOMATION", 
-      name: nameEl.value, 
-      day: dayEl.value, 
-      subject: subjectEl.value, 
-      topic: topicEl.value,
-      duration: durationEl.value 
-    });
-    setStatus(resp?.ok ? "Started." : `Failed: ${resp?.error || "unknown"}`);
-  } catch (e) {
-    setStatus(`Error: ${e.message}`);
-  }
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const payload = { type: "RUN_AUTOMATION" };
+    fields.forEach(id => payload[id] = els[id].value);
+    
+    await chrome.tabs.sendMessage(tab.id, payload);
+    setStatus("Started.");
+  } catch (e) { setStatus(`Error: ${e.message}`); }
 });
 
-saveBtn.addEventListener("click", async () => {
-  await saveAllData();
-  setStatus("Saved manually.");
-});
-
-stopBtn.addEventListener("click", async () => {
-  try {
-    const resp = await sendToContent({ type: "STOP_AUTOMATION" });
-    setStatus(resp?.ok ? "Stop requested." : "Stop failed.");
-  } catch (e) {
-    setStatus(`Error: ${e.message}`);
-  }
-});
-
+saveBtn.addEventListener("click", async () => { await saveAllData(); setStatus("Saved."); });
 loadSavedData();

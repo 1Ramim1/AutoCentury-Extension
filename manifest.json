@@ -10,10 +10,11 @@
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["<all_urls>"],
   "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  {
+    "matches": ["https://app.century.tech/*"],
+    "js": ["content.js"],
+    "all_frames": true,
+    "match_about_blank": true
+  }
+]
 }

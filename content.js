@@ -1,10 +1,11 @@
 (() => {
   if (window.__studentPickerInstalled) return;
   window.__studentPickerInstalled = true;
-
   let abortController = null;
 
   // --- Selectors ---
+  const START_TIME_SEL = '[data-testid="time-picker-startTime"]';
+  const DUE_TIME_SEL = '[data-testid="time-picker-dueTime"]';
   const CREATE_SEL = '[data-testid="create-assignment-button"]';
   const STUDENTS_SEL = '[data-testid="for-students-button"]';
   const SEARCH_INPUT_SEL = '[data-testid="search-input"]';
@@ -19,7 +20,6 @@
   const TABLE_ROW_SEL = 'tbody tr.rc-table-row-clickable';
   const ADD_NUGGETS_BTN_SEL = '[data-testid="td-assignment-nuggets-widget-add-button"]';
 
-  // --- Helper Functions ---
   const quickWait = (ms) => new Promise(res => setTimeout(res, ms));
 
   async function waitFor(selector, timeoutMs = 10000, root = document, signal) {
@@ -34,7 +34,7 @@
   }
 
   function setNativeValue(input, value) {
-    if (!input) return;
+    if (!input || !value) return;
     const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
     if (setter) setter.call(input, value);
     else input.value = value;
@@ -45,7 +45,7 @@
   function pointerTap(el) {
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const opts = { bubbles: true, clientX: r.left + r.width/2, clientY: r.top + r.height/2 };
+    const opts = { bubbles: true, clientX: r.left + r.width/2, clientY: r.top + r.height/2, view: window };
     el.dispatchEvent(new PointerEvent("pointerdown", { ...opts, pointerType: "mouse" }));
     el.dispatchEvent(new MouseEvent("mousedown", opts));
     el.dispatchEvent(new PointerEvent("pointerup", { ...opts, pointerType: "mouse" }));
@@ -53,158 +53,120 @@
     el.dispatchEvent(new MouseEvent("click", opts));
   }
 
-  // --- Main Automation Logic ---
-  async function runAutomation(name, day, subject, duration, topic, signal) {
-    console.time("AutomationDuration");
+  // New specific clicker for the Add button
+  function forceAddClick(btn) {
+    const events = ['mouseenter', 'mouseover', 'mousedown', 'mouseup', 'click'];
+    events.forEach(type => {
+        btn.dispatchEvent(new MouseEvent(type, {
+            view: window, bubbles: true, cancelable: true, buttons: 1
+        }));
+    });
+  }
 
-    // Subject Mapping
-    let mappedSubject = subject; 
-    if (["Physics", "Chemistry", "Biology"].includes(subject)) {
-        mappedSubject = "Science";
-    } else if (["English Language", "English Literature"].includes(subject)) {
-        mappedSubject = "English";
-    }
+  async function runAutomation(data, signal) {
+    const isMainDoc = window.location.href.includes('/teach/assignments');
 
-    // 1) Open Flow
-    const createBtn = await waitFor(CREATE_SEL, 10000, document, signal);
-    createBtn.click();
-    
-    const studentsBtn = await waitFor(STUDENTS_SEL, 10000, document, signal);
-    studentsBtn.click();
+    if (isMainDoc) {
+        // --- PART A: ASSIGNMENT SETUP ---
+        let mappedSubject = data.subject; 
+        if (["Physics", "Chemistry", "Biology"].includes(data.subject)) mappedSubject = "Science";
+        else if (["English Language", "English Literature"].includes(data.subject)) mappedSubject = "English";
 
-    // 2) Search Student
-    const modal = await waitFor(MODAL_SEL, 10000, document, signal);
-    const searchInput = await waitFor('.rc-search-box--large ' + SEARCH_INPUT_SEL, 5000, modal, signal);
-    setNativeValue(searchInput, name);
-    
-    const searchBtn = modal.querySelector('.rc-search-box--large ' + SEARCH_BTN_SEL);
-    if (searchBtn) searchBtn.click();
+        const createBtn = await waitFor(CREATE_SEL, 10000, document, signal);
+        createBtn.click();
+        const studentsBtn = await waitFor(STUDENTS_SEL, 10000, document, signal);
+        studentsBtn.click();
+        
+        const modal = await waitFor(MODAL_SEL, 10000, document, signal);
+        const searchInput = await waitFor('.rc-search-box--large ' + SEARCH_INPUT_SEL, 5000, modal, signal);
+        setNativeValue(searchInput, data.name);
+        
+        const searchBtn = modal.querySelector('.rc-search-box--large ' + SEARCH_BTN_SEL);
+        if (searchBtn) searchBtn.click();
+        
+        const firstRow = await waitFor(TABLE_ROW_SEL, 8000, modal, signal);
+        pointerTap(firstRow.querySelector("label.cds-checkbox__input-label") || firstRow);
+        (await waitFor(NEXT_BTN_SEL, 5000, modal, signal)).click();
 
-    // 3) Wait for results
-    const firstRow = await waitFor(TABLE_ROW_SEL, 8000, modal, signal);
-    
-    // 4) Select & Next
-    const checkbox = firstRow.querySelector("label.cds-checkbox__input-label") || firstRow;
-    pointerTap(checkbox);
-    
-    const nextBtn = await waitFor(NEXT_BTN_SEL, 5000, modal, signal);
-    nextBtn.click();
+        setNativeValue(await waitFor(ASSIGNMENT_NAME_SEL, 8000, document, signal), `${data.name} ${data.day} ${data.subject} Homework`);
 
-    // 5) Fill Settings
-    const nameInput = await waitFor(ASSIGNMENT_NAME_SEL, 8000, document, signal);
-    setNativeValue(nameInput, `${name} ${day} ${subject} Homework`);
+        const subSelect = await waitFor(SUBJECT_SELECT_SEL, 5000, document, signal);
+        const targetOpt = Array.from(subSelect.options).find(o => o.text.trim() === mappedSubject);
+        if (targetOpt) { subSelect.value = targetOpt.value; subSelect.dispatchEvent(new Event('change', { bubbles: true })); }
 
-    const subSelect = await waitFor(SUBJECT_SELECT_SEL, 5000, document, signal);
-    const targetOpt = Array.from(subSelect.options).find(o => o.text.trim() === mappedSubject);
-    if (targetOpt) {
-      subSelect.value = targetOpt.value;
-      subSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    }
+        setNativeValue(await waitFor(START_DATE_SEL, 2000, document, signal), data.startDate);
+        setNativeValue(await waitFor(START_TIME_SEL, 2000, document, signal), data.startTime);
+        setNativeValue(await waitFor(DUE_DATE_SEL, 2000, document, signal), data.dueDate);
+        setNativeValue(await waitFor(DUE_TIME_SEL, 2000, document, signal), data.dueTime);
 
-    // Dates
-    const startInput = await waitFor(START_DATE_SEL, 2000, document, signal);
-    const dueInput = await waitFor(DUE_DATE_SEL, 2000, document, signal);
-    const d = new Date();
-    const fmt = (date) => date.toISOString().split('T')[0];
-    setNativeValue(startInput, fmt(d));
-    d.setDate(d.getDate() + (parseInt(duration) || 0));
-    setNativeValue(dueInput, fmt(d));
-
-    // 6) Final Create
-    const finish = await waitFor(FINAL_CREATE_BTN_SEL, 5000, document, signal);
-    finish.click();
-
-    // 7) Select Nuggets
-    const addNuggetsBtn = await waitFor(ADD_NUGGETS_BTN_SEL, 10000, document, signal);
-    pointerTap(addNuggetsBtn);
-
-    // 8) SELECT COURSE (Mathematics specific)
-    if (subject === "Mathematics") {
-        try {
+        (await waitFor(FINAL_CREATE_BTN_SEL, 5000, document, signal)).click();
+        pointerTap(await waitFor(ADD_NUGGETS_BTN_SEL, 10000, document, signal));
+        
+        if (data.subject === "Mathematics") {
             const MATH_H_ID = "88dc59ab-6ede-46f2-831b-c3513c14f216";
-            let courseSelect = null;
-            const startTime = Date.now();
-            while (Date.now() - startTime < 10000) {
-                if (signal?.aborted) return;
-                courseSelect = document.querySelector('select[name="course"]');
-                if (courseSelect && Array.from(courseSelect.options).some(opt => opt.value === MATH_H_ID)) break; 
+            const start = Date.now();
+            while (Date.now() - start < 10000 && !signal.aborted) {
+                const cs = document.querySelector('select[name="course"]');
+                if (cs && Array.from(cs.options).some(o => o.value === MATH_H_ID)) {
+                    cs.value = MATH_H_ID; cs.dispatchEvent(new Event('change', { bubbles: true }));
+                    await quickWait(1000); break;
+                }
                 await new Promise(r => setTimeout(r, 500));
             }
-            if (courseSelect) {
-                courseSelect.value = MATH_H_ID;
-                courseSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                await quickWait(1000);
-            }
-        } catch (e) { console.warn("Math course selection failed:", e.message); }
+        }
     }
 
-    // 9) SEARCH FOR TOPIC (Iframe piercing)
-    if (topic) {
-        let nuggetSearch = null;
-        const iframes = Array.from(document.querySelectorAll('iframe'));
-        for (const frame of iframes) {
-            try {
-                if (frame.contentDocument) {
-                    nuggetSearch = frame.contentDocument.querySelector('input[placeholder="Search"][data-testid="search-input"]');
-                    if (nuggetSearch) break;
-                }
-            } catch (e) { /* skip cross-origin */ }
-        }
-        if (!nuggetSearch) nuggetSearch = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 5000, document, signal);
-
-        if (nuggetSearch) {
-            setNativeValue(nuggetSearch, topic);
-            await quickWait(600);
-            const parent = nuggetSearch.closest('.rc-search-box') || nuggetSearch.parentElement;
-            const sBtn = parent.querySelector('button[data-testid="search-btn"]');
-            if (sBtn) sBtn.click();
-            else nuggetSearch.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    // --- PART B: NUGGET SELECTION (In frame or main) ---
+    if (data.topic) {
+        try {
+            const nInput = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 8000, document, signal);
+            setNativeValue(nInput, data.topic);
+            await quickWait(800);
             
-            await quickWait(1500);
+            const sBtn = (nInput.closest('.rc-search-box') || nInput.parentElement).querySelector('button[data-testid="search-btn"]');
+            if (sBtn) sBtn.click(); 
+            else nInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            
+            await quickWait(2000);
 
-            // 10) SELECT NUGGET & ADD
-            try {
-                const root = nuggetSearch.ownerDocument;
-                const firstCheck = await waitFor('tbody tr.rc-table-row-clickable label.cds-checkbox__input-label', 5000, root, signal);
-                if (firstCheck) {
-                    pointerTap(firstCheck);
+            const check = await waitFor('tbody tr.rc-table-row-clickable label.cds-checkbox__input-label', 5000, document, signal);
+            if (check) {
+                pointerTap(check);
+                console.log("Nugget checked. Waiting for button...");
+                await quickWait(1500);
+
+                // Find the ADD button using the info from Test 1
+                const addBtn = Array.from(document.querySelectorAll('button')).find(b => 
+                    b.textContent.trim().toLowerCase() === 'add' && 
+                    b.className.includes('btn--primary')
+                );
+
+                if (addBtn) { 
+                    console.log("Found button, applying nuclear click...");
+                    forceAddClick(addBtn);
                     await quickWait(1000);
-                    const addBtn = Array.from(root.querySelectorAll('button')).find(b => 
-                        b.textContent.includes('ADD') || b.getAttribute('data-testid') === 'add-button' || b.className.includes('btn--primary')
-                    );
-                    if (addBtn) {
-                        addBtn.click();
-                        pointerTap(addBtn);
-                    }
                 }
-            } catch (e) { console.warn("Nugget selection failed:", e.message); }
-        }
+            }
+        } catch (e) { console.log("Frame check finished."); }
     }
 
-    // 11) BACK BUTTON
-    try {
-        const backBtn = await waitFor('[data-testid="back-btn"]', 5000, document, signal);
-        if (backBtn) {
-            const link = backBtn.querySelector('a') || backBtn;
-            pointerTap(link);
-            console.log("✅ Workflow complete.");
-        }
-    } catch (e) { console.warn("Back button failed:", e.message); }
-
-    console.timeEnd("AutomationDuration");
+    // --- PART C: FINAL BACK ---
+    if (isMainDoc) {
+        try {
+            await quickWait(2500);
+            const back = Array.from(document.querySelectorAll('a, button')).find(el => el.textContent.trim() === 'Back');
+            if (back) pointerTap(back);
+        } catch (e) {}
+    }
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === "RUN_AUTOMATION") {
       if (abortController) abortController.abort();
       abortController = new AbortController();
-      runAutomation(msg.name, msg.day, msg.subject, msg.duration, msg.topic, abortController.signal)
-        .catch(e => console.warn("Automation error:", e.message));
+      runAutomation(msg, abortController.signal).catch(console.warn);
       sendResponse({ ok: true });
-    } else if (msg.type === "STOP_AUTOMATION") {
-      if (abortController) abortController.abort();
-      sendResponse({ ok: true });
-    }
+    } else if (msg.type === "STOP_AUTOMATION") { abortController?.abort(); sendResponse({ ok: true }); }
     return true;
   });
 })();
