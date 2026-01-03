@@ -8,13 +8,13 @@
     "default_popup": "popup.html"
   },
   "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": ["<all_urls>"],
+  "host_permissions": ["https://app.century.tech/*"],
   "content_scripts": [
-  {
-    "matches": ["https://app.century.tech/*"],
-    "js": ["content.js"],
-    "all_frames": true,
-    "match_about_blank": true
-  }
-]
+    {
+      "matches": ["https://*.century.tech/*"],
+      "js": ["content.js"],
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ]
 }

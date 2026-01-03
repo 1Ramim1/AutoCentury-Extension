@@ -3,12 +3,12 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Student Picker</title>
+    <title>Student Picker Batch</title>
     <style>
         body {
             font-family: system-ui, sans-serif;
             margin: 12px;
-            width: 340px;
+            width: 360px;
         }
 
         label {
@@ -21,13 +21,20 @@
         }
 
         input,
-        select {
+        select,
+        textarea {
             width: 100%;
             box-sizing: border-box;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 8px;
             font-size: 13px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+            font-family: monospace;
         }
 
         button {
@@ -64,6 +71,7 @@
             margin-top: 10px;
             font-size: 12px;
             color: #333;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -90,35 +98,20 @@
         <option value="Physics">Physics</option>
     </select>
 
-    <label for="topic">Topic</label>
-    <input type="text" id="topic" placeholder="e.g. Fractions" />
+    <label for="batchData">Students & Topic (Name, Topic)</label>
+    <textarea id="batchData" placeholder="Ahmed Hamza, Fractions&#10;John Smith, Decimals"></textarea>
 
     <div class="row">
-        <div>
-            <label for="startDate">Start Date</label>
-            <input type="date" id="startDate">
-        </div>
-        <div>
-            <label for="startTime">Start Time</label>
-            <input type="time" id="startTime">
-        </div>
+        <div><label for="startDate">Start Date</label><input type="date" id="startDate"></div>
+        <div><label for="startTime">Start Time</label><input type="time" id="startTime"></div>
     </div>
 
     <div class="row">
-        <div>
-            <label for="dueDate">Due Date</label>
-            <input type="date" id="dueDate">
-        </div>
-        <div>
-            <label for="dueTime">Due Time</label>
-            <input type="time" id="dueTime">
-        </div>
+        <div><label for="dueDate">Due Date</label><input type="date" id="dueDate"></div>
+        <div><label for="dueTime">Due Time</label><input type="time" id="dueTime"></div>
     </div>
 
-    <label for="name">Student name</label>
-    <input id="name" placeholder='e.g. "Ahmed, Hamza"' />
-
-    <button id="run" class="primary">Run on this tab</button>
+    <button id="run" class="primary">Run Batch Automation</button>
     <div class="row" style="margin-top:10px;">
         <button id="save" class="secondary">Save</button>
         <button id="stop" class="secondary">Stop</button>

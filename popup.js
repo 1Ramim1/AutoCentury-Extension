@@ -1,13 +1,9 @@
-const fields = ["name", "day", "subject", "topic", "startDate", "startTime", "dueDate", "dueTime"];
+const fields = ["day", "subject", "batchData", "startDate", "startTime", "dueDate", "dueTime"];
 const els = {};
 fields.forEach(id => els[id] = document.getElementById(id));
 
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
-const saveBtn = document.getElementById("save");
-const stopBtn = document.getElementById("stop");
-
-function setStatus(msg) { statusEl.textContent = msg || ""; }
 
 async function saveAllData() {
   const data = {};
@@ -18,8 +14,8 @@ async function saveAllData() {
 async function loadSavedData() {
   const keys = fields.map(id => `saved_${id}`);
   const data = await chrome.storage.sync.get(keys);
-  fields.forEach(id => {
-    if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`];
+  fields.forEach(id => { 
+    if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`]; 
   });
 }
 
@@ -29,16 +25,51 @@ fields.forEach(id => {
 });
 
 runBtn.addEventListener("click", async () => {
-  try {
-    setStatus("Running...");
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const payload = { type: "RUN_AUTOMATION" };
-    fields.forEach(id => payload[id] = els[id].value);
-    
-    await chrome.tabs.sendMessage(tab.id, payload);
-    setStatus("Started.");
-  } catch (e) { setStatus(`Error: ${e.message}`); }
+  const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
+  if (lines.length === 0) {
+    statusEl.textContent = "Error: No data found.";
+    return;
+  }
+
+  const students = lines.map(line => {
+    const [name, topic] = line.split(',');
+    return { name: name?.trim(), topic: topic?.trim() };
+  });
+
+  const settings = {
+    day: els.day.value,
+    subject: els.subject.value,
+    startDate: els.startDate.value,
+    startTime: els.startTime.value,
+    dueDate: els.dueDate.value,
+    dueTime: els.dueTime.value
+  };
+
+  await chrome.storage.local.set({ 
+    "activeQueue": students, 
+    "batchSettings": settings,
+    "isPaused": false 
+  });
+
+  statusEl.textContent = `Batch started for ${students.length} students...`;
+  statusEl.style.color = "blue";
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" });
 });
 
-saveBtn.addEventListener("click", async () => { await saveAllData(); setStatus("Saved."); });
+// --- NEW: Listener for the "Done" signal ---
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "BATCH_COMPLETE") {
+    statusEl.textContent = "✅ All Assignments Done!";
+    statusEl.style.color = "green";
+  }
+});
+
+document.getElementById("stop").addEventListener("click", async () => {
+    await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
+    statusEl.textContent = "Stopped.";
+    statusEl.style.color = "red";
+});
+
 loadSavedData();
