@@ -1,7 +1,7 @@
 const nameEl = document.getElementById("name");
 const dayEl = document.getElementById("day");
 const subjectEl = document.getElementById("subject");
-const topicEl = document.getElementById("topic"); // Added
+const topicEl = document.getElementById("topic");
 const durationEl = document.getElementById("duration");
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
@@ -13,13 +13,12 @@ function setStatus(msg) {
 }
 
 // --- PERSISTENCE LOGIC ---
-
 async function saveAllData() {
   const data = {
     savedName: nameEl.value?.trim() || "",
     savedDay: dayEl.value,
     savedSubject: subjectEl.value,
-    savedTopic: topicEl.value?.trim() || "", // Added
+    savedTopic: topicEl.value?.trim() || "",
     savedDuration: durationEl.value
   };
   await chrome.storage.sync.set(data);
@@ -31,25 +30,23 @@ async function loadSavedData() {
     "savedName", 
     "savedDay", 
     "savedSubject", 
-    "savedTopic", // Added
+    "savedTopic", 
     "savedDuration"
   ]);
   
   if (data.savedName !== undefined) nameEl.value = data.savedName;
   if (data.savedDay !== undefined) dayEl.value = data.savedDay;
   if (data.savedSubject !== undefined) subjectEl.value = data.savedSubject;
-  if (data.savedTopic !== undefined) topicEl.value = data.savedTopic; // Added
+  if (data.savedTopic !== undefined) topicEl.value = data.savedTopic;
   if (data.savedDuration !== undefined) durationEl.value = data.savedDuration;
 }
 
-// Add listeners to save automatically
 [nameEl, dayEl, subjectEl, topicEl, durationEl].forEach(el => {
   el.addEventListener("change", saveAllData);
   el.addEventListener("input", saveAllData); 
 });
 
 // --- MESSAGING LOGIC ---
-
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -78,7 +75,7 @@ runBtn.addEventListener("click", async () => {
       name: nameEl.value, 
       day: dayEl.value, 
       subject: subjectEl.value, 
-      topic: topicEl.value, // Added
+      topic: topicEl.value,
       duration: durationEl.value 
     });
     setStatus(resp?.ok ? "Started." : `Failed: ${resp?.error || "unknown"}`);
