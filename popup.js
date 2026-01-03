@@ -13,7 +13,7 @@ async function saveAllData() {
 
 async function loadSavedData() {
   const keys = fields.map(id => `saved_${id}`);
-  const data = await chrome.storage.sync.get(keys);
+  const data = await chrome.storage.get(keys);
   fields.forEach(id => { 
     if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`]; 
   });
@@ -32,8 +32,11 @@ runBtn.addEventListener("click", async () => {
   }
 
   const students = lines.map(line => {
-    const [name, topic] = line.split(',');
-    return { name: name?.trim(), topic: topic?.trim() };
+    const parts = line.split(',');
+    return { 
+        name: parts[0]?.trim() || "Student", 
+        topic: parts[1]?.trim() || "Topic" 
+    };
   });
 
   const settings = {
@@ -55,10 +58,14 @@ runBtn.addEventListener("click", async () => {
   statusEl.style.color = "blue";
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  await chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" });
+  if (tab) {
+      chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(err => {
+          // If content script isn't ready, the page reload will trigger resumeBatch automatically
+          console.log("Waiting for page interaction...");
+      });
+  }
 });
 
-// --- NEW: Listener for the "Done" signal ---
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "BATCH_COMPLETE") {
     statusEl.textContent = "✅ All Assignments Done!";

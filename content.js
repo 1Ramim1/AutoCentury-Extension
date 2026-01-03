@@ -3,6 +3,12 @@
 
   const quickWait = (ms) => new Promise(res => setTimeout(res, ms));
 
+  // Helper to capitalize words (e.g., "monesha ahmed" -> "Monesha Ahmed")
+  const capitalize = (str) => {
+    if (!str) return "";
+    return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
   const setNativeValue = (input, value) => {
     if (!input || !value) return;
     const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), "value")?.set;
@@ -47,8 +53,14 @@
     pointerTap(row.querySelector("label.cds-checkbox__input-label") || row);
     (await waitFor('[data-testid="next-button"]', 5000, modal, signal)).click();
 
-    // 3. Fill Form
-    setNativeValue(await waitFor('[data-testid="text-input-assignmentName"]', 8000, document, signal), `${studentName} ${settings.day} ${settings.subject} Homework`);
+    // 3. Fill Form with New Naming Convention
+    // Formatting: Name (Cap) - Topic (Cap) HW - Day (3 letters) Class
+    const capName = capitalize(studentName);
+    const capTopic = capitalize(topic);
+    const shortDay = settings.day.substring(0, 3);
+    const newAssignmentName = `${capName} - ${capTopic} HW - ${shortDay} Class`;
+
+    setNativeValue(await waitFor('[data-testid="text-input-assignmentName"]', 8000, document, signal), newAssignmentName);
     
     const subSelect = await waitFor('select#select.cds-select', 5000, document, signal);
     const opt = Array.from(subSelect.options).find(o => o.text.trim().includes(settings.subject === "Mathematics" ? "Mathematics" : settings.subject));
@@ -97,7 +109,7 @@
         }
     }
 
-    // 6. Navigate Back (Triggers page reload and next batch item)
+    // 6. Navigate Back
     await quickWait(2500);
     const backLink = document.querySelector('a[href="/teach/assignments"]') || 
                      Array.from(document.querySelectorAll('a, button')).find(el => el.textContent.trim() === 'Back');
@@ -107,17 +119,16 @@
   async function resumeBatch() {
     const data = await chrome.storage.local.get(["activeQueue", "batchSettings", "isPaused"]);
     
-    // Check if queue is finished
-    if (!data.isPaused && data.activeQueue && data.activeQueue.length === 0) {
+    if (data.isPaused) return;
+
+    if (!data.activeQueue || data.activeQueue.length === 0) {
+        // If we load the page and the queue is empty, trigger the Done signal
         chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
         return;
     }
 
-    if (data.isPaused || !data.activeQueue || data.activeQueue.length === 0) return;
-
     if (window.location.href.includes('/teach/assignments')) {
       const current = data.activeQueue[0];
-      console.log(`Automating: ${current.name} - ${current.topic}`);
       
       try {
         await runSingleAssignment(current.name, current.topic, data.batchSettings, abortController.signal);
@@ -125,6 +136,11 @@
         // Remove processed student and update storage
         const newQueue = data.activeQueue.slice(1);
         await chrome.storage.local.set({ "activeQueue": newQueue });
+        
+        // If that was the last student, trigger done immediately
+        if (newQueue.length === 0) {
+            chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
+        }
       } catch (e) {
         console.error("Batch Step Failed:", e.message);
       }
@@ -139,6 +155,5 @@
     }
   });
 
-  // Always check for tasks when a page loads
   resumeBatch();
 })();
