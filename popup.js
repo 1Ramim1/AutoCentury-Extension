@@ -1,6 +1,7 @@
 const nameEl = document.getElementById("name");
 const dayEl = document.getElementById("day");
 const subjectEl = document.getElementById("subject");
+const topicEl = document.getElementById("topic"); // Added
 const durationEl = document.getElementById("duration");
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
@@ -13,37 +14,38 @@ function setStatus(msg) {
 
 // --- PERSISTENCE LOGIC ---
 
-// Function to save everything currently in the UI
 async function saveAllData() {
   const data = {
     savedName: nameEl.value?.trim() || "",
     savedDay: dayEl.value,
     savedSubject: subjectEl.value,
+    savedTopic: topicEl.value?.trim() || "", // Added
     savedDuration: durationEl.value
   };
   await chrome.storage.sync.set(data);
   console.log("Data auto-saved");
 }
 
-// Loads data and sets the UI values
 async function loadSavedData() {
   const data = await chrome.storage.sync.get([
     "savedName", 
     "savedDay", 
     "savedSubject", 
+    "savedTopic", // Added
     "savedDuration"
   ]);
   
   if (data.savedName !== undefined) nameEl.value = data.savedName;
   if (data.savedDay !== undefined) dayEl.value = data.savedDay;
   if (data.savedSubject !== undefined) subjectEl.value = data.savedSubject;
+  if (data.savedTopic !== undefined) topicEl.value = data.savedTopic; // Added
   if (data.savedDuration !== undefined) durationEl.value = data.savedDuration;
 }
 
-// Add listeners to save automatically whenever a user changes a value
-[nameEl, dayEl, subjectEl, durationEl].forEach(el => {
+// Add listeners to save automatically
+[nameEl, dayEl, subjectEl, topicEl, durationEl].forEach(el => {
   el.addEventListener("change", saveAllData);
-  el.addEventListener("input", saveAllData); // 'input' handles typing in real-time
+  el.addEventListener("input", saveAllData); 
 });
 
 // --- MESSAGING LOGIC ---
@@ -76,6 +78,7 @@ runBtn.addEventListener("click", async () => {
       name: nameEl.value, 
       day: dayEl.value, 
       subject: subjectEl.value, 
+      topic: topicEl.value, // Added
       duration: durationEl.value 
     });
     setStatus(resp?.ok ? "Started." : `Failed: ${resp?.error || "unknown"}`);
@@ -84,7 +87,6 @@ runBtn.addEventListener("click", async () => {
   }
 });
 
-// Explicit save button still works if preferred
 saveBtn.addEventListener("click", async () => {
   await saveAllData();
   setStatus("Saved manually.");
@@ -99,5 +101,4 @@ stopBtn.addEventListener("click", async () => {
   }
 });
 
-// Initialize the UI with saved data when popup opens
 loadSavedData();

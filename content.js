@@ -57,7 +57,7 @@
   }
 
   // --- Automation Logic ---
-  async function runAutomation(name, day, subject, duration, signal) {
+  async function runAutomation(name, day, subject, duration, topic, signal) {
     console.time("AutomationDuration");
 
     // 1) Open Flow
@@ -157,6 +157,114 @@
         }
     }
 
+    // 9) SEARCH FOR TOPIC (Nugget Name)
+    if (topic) {
+        console.log(`🔎 Searching for topic: ${topic}`);
+        try {
+            let nuggetSearch = null;
+            
+            // 1. Check iframes that we actually have permission to see
+            const iframes = Array.from(document.querySelectorAll('iframe'));
+            for (const frame of iframes) {
+                try {
+                    // Only attempt to look inside if it's on the same domain
+                    if (frame.contentDocument) {
+                        nuggetSearch = frame.contentDocument.querySelector('input[placeholder="Search"][data-testid="search-input"]');
+                        if (nuggetSearch) {
+                            console.log("🎯 Found search input inside a local iframe.");
+                            break;
+                        }
+                    }
+                } catch (e) {
+                    // Silent skip for cross-origin frames to avoid console clutter
+                }
+            }
+
+            // 2. Fallback to main document if not in an accessible iframe
+            if (!nuggetSearch) {
+                nuggetSearch = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 5000, document, signal);
+            }
+
+            if (nuggetSearch) {
+                setNativeValue(nuggetSearch, topic);
+                await quickWait(600);
+
+                const parent = nuggetSearch.closest('.rc-search-box') || nuggetSearch.parentElement;
+                const searchBtn = parent.querySelector('button[data-testid="search-btn"]');
+
+                if (searchBtn) {
+                    searchBtn.disabled = false;
+                    searchBtn.click();
+                } else {
+                    nuggetSearch.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+                }
+                
+                console.log("✅ Nugget search triggered.");
+                await quickWait(1500); // Wait for table to update
+            }
+
+            // 10) SELECT FIRST NUGGET & ADD
+            try {
+                console.log("🖱️ Attempting to select the first nugget...");
+                
+                // Root is the iframe document
+                const root = nuggetSearch?.ownerDocument || document;
+                
+                const firstCheckbox = await waitFor('tbody tr.rc-table-row-clickable label.cds-checkbox__input-label', 5000, root, signal);
+                
+                if (firstCheckbox) {
+                    pointerTap(firstCheckbox);
+                    console.log("✅ First nugget selected.");
+                    
+                    await quickWait(1000); 
+                    
+                    const allButtons = Array.from(root.querySelectorAll('button'));
+                    const addBtn = allButtons.find(b => 
+                        b.textContent.includes('ADD') || 
+                        b.getAttribute('data-testid') === 'add-button' ||
+                        b.className.includes('btn--primary')
+                    );
+                    
+                    if (addBtn) {
+                        console.log("🎯 ADD button found inside frame. Clicking...");
+                        addBtn.click();
+                        pointerTap(addBtn); 
+                        console.log("🚀 Success! Assignment finalized.");
+                    } else {
+                        throw new Error("Found checkbox but could not find ADD button in the same frame.");
+                    }
+                }
+            } catch (e) {
+                console.warn("⚠️ Step 10 Failed:", e.message);
+            }
+
+        } catch (e) {
+            console.warn("Nugget search step skipped:", e.message);
+        }
+    }
+
+    // 11) RETURN TO ASSIGNMENTS (Back Button)
+    try {
+        console.log("⬅️ Attempting to click the Back button...");
+        
+        // Use the main document
+        const backBtn = await waitFor('[data-testid="back-btn"]', 5000, document, signal);
+        
+        if (backBtn) {
+            // Target the actual link inside the container
+            const link = backBtn.querySelector('a') || backBtn;
+            
+            // Use your pointerTap helper because Test 3 proved it works!
+            pointerTap(link);
+            
+            console.log("✅ Back button triggered via pointerTap. Automation Complete.");
+        }
+    } catch (e) {
+        console.warn("⚠️ Could not find or click the Back button:", e.message);
+        // Emergency Fallback: If the button still won't click, just force navigation
+        // window.location.href = '/teach/assignments';
+    }
+
     console.timeEnd("AutomationDuration");
     console.log("🚀 Done!");
   }
@@ -165,8 +273,10 @@
     if (msg.type === "RUN_AUTOMATION") {
       if (abortController) abortController.abort();
       abortController = new AbortController();
-      runAutomation(msg.name, msg.day, msg.subject, msg.duration, abortController.signal)
+      
+      runAutomation(msg.name, msg.day, msg.subject, msg.duration, msg.topic, abortController.signal)
         .catch(e => console.warn("Automation stopped or failed:", e.message));
+        
       sendResponse({ ok: true });
     }
     return true;
