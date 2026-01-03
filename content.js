@@ -17,10 +17,12 @@
   const FINAL_CREATE_BTN_SEL = '[data-testid="teacher-assignment-modal-create-button"]';
   const MODAL_SEL = '[role="dialog"]';
   const TABLE_ROW_SEL = 'tbody tr.rc-table-row-clickable';
+  const ADD_NUGGETS_BTN_SEL = '[data-testid="td-assignment-nuggets-widget-add-button"]';
+  
+  // NEW SELECTOR: Course dropdown in the nuggets modal
+  const COURSE_SELECT_SEL = 'select[name="course"]';
 
   // --- Fast Helper Functions ---
-  
-  // Minimal sleep only for UI animations (e.g., modals sliding in)
   const quickWait = (ms) => new Promise(res => setTimeout(res, ms));
 
   async function waitFor(selector, timeoutMs = 10000, root = document, signal) {
@@ -28,9 +30,8 @@
     while (Date.now() - start < timeoutMs) {
       if (signal?.aborted) throw new Error("Aborted");
       const el = root.querySelector(selector);
-      // Ensure element is not only present but visible/interactable
       if (el && el.getBoundingClientRect().width > 0) return el;
-      await new Promise(r => requestAnimationFrame(r)); // Sync with browser frames for max speed
+      await new Promise(r => requestAnimationFrame(r)); 
     }
     throw new Error(`Timeout: ${selector}`);
   }
@@ -74,18 +75,17 @@
     const searchBtn = modal.querySelector('.rc-search-box--large ' + SEARCH_BTN_SEL);
     if (searchBtn) searchBtn.click();
 
-    // 3) WAIT FOR RESULTS (Smart Polling)
-    // Instead of sleep(3000), we wait until the first row matches our search name
+    // 3) WAIT FOR RESULTS
     const firstRow = await waitFor(TABLE_ROW_SEL, 8000, modal, signal);
     
-    // 4) Select & Next (Immediate)
+    // 4) Select & Next
     const checkbox = firstRow.querySelector("label.cds-checkbox__input-label") || firstRow;
     pointerTap(checkbox);
     
     const nextBtn = await waitFor(NEXT_BTN_SEL, 5000, modal, signal);
     nextBtn.click();
 
-    // 5) Fill Settings (Immediate as soon as inputs exist)
+    // 5) Fill Settings
     const nameInput = await waitFor(ASSIGNMENT_NAME_SEL, 8000, document, signal);
     setNativeValue(nameInput, `${name} ${day} Homework`);
 
@@ -111,6 +111,52 @@
     const finish = await waitFor(FINAL_CREATE_BTN_SEL, 5000, document, signal);
     finish.click();
 
+    // 7) Select Nuggets
+    const addNuggetsBtn = await waitFor(ADD_NUGGETS_BTN_SEL, 10000, document, signal);
+    pointerTap(addNuggetsBtn);
+
+    // 8) SELECT COURSE: With Smart Loading Check
+    if (subject === "Mathematics") {
+        console.log("📐 Subject is Mathematics. Waiting for courses to load...");
+        try {
+            const MATH_H_ID = "88dc59ab-6ede-46f2-831b-c3513c14f216";
+            let courseSelect = null;
+            let optionExists = false;
+
+            // Loop for up to 10 seconds waiting for the OPTION to exist inside the SELECT
+            const startTime = Date.now();
+            while (Date.now() - startTime < 10000) {
+                if (signal?.aborted) return;
+
+                courseSelect = document.querySelector('select[name="course"]');
+                if (courseSelect) {
+                    // Check if the specific Mathematics Secondary (H) option is in the list yet
+                    optionExists = Array.from(courseSelect.options).some(opt => opt.value === MATH_H_ID);
+                    if (optionExists) break; 
+                }
+                await new Promise(r => setTimeout(r, 500)); // Wait 0.5s before checking again
+            }
+
+            if (optionExists && courseSelect) {
+                // Force the selection
+                courseSelect.value = MATH_H_ID;
+                
+                // Critical: Trigger multiple events to satisfy the website's framework
+                courseSelect.dispatchEvent(new Event('input', { bubbles: true }));
+                courseSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                console.log("✅ Successfully selected Mathematics Secondary (H) after loading.");
+                
+                // Give the UI a moment to load the nuggets for this course
+                await quickWait(1000);
+            } else {
+                console.warn("❌ Timed out waiting for Mathematics Secondary (H) to appear in dropdown.");
+            }
+        } catch (e) {
+            console.error("❌ Error in selection loop:", e.message);
+        }
+    }
+
     console.timeEnd("AutomationDuration");
     console.log("🚀 Done!");
   }
@@ -120,7 +166,7 @@
       if (abortController) abortController.abort();
       abortController = new AbortController();
       runAutomation(msg.name, msg.day, msg.subject, msg.duration, abortController.signal)
-        .catch(e => console.warn("Streamlined run stopped or failed:", e.message));
+        .catch(e => console.warn("Automation stopped or failed:", e.message));
       sendResponse({ ok: true });
     }
     return true;
