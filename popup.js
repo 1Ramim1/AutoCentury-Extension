@@ -4,7 +4,6 @@ fields.forEach(id => els[id] = document.getElementById(id));
 
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
-const saveBtn = document.getElementById("save");
 
 // --- PERSISTENCE LOGIC ---
 
@@ -22,16 +21,10 @@ async function loadSavedData() {
   });
 }
 
+// Automatically save whenever any field changes
 fields.forEach(id => {
   els[id].addEventListener("change", saveAllData);
   els[id].addEventListener("input", saveAllData);
-});
-
-saveBtn.addEventListener("click", async () => {
-  await saveAllData();
-  statusEl.textContent = "Settings saved!";
-  statusEl.style.color = "green";
-  setTimeout(() => { statusEl.textContent = ""; }, 2000);
 });
 
 // --- AUTOMATION LOGIC ---
