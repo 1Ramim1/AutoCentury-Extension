@@ -4,37 +4,29 @@ fields.forEach(id => els[id] = document.getElementById(id));
 
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
-const saveBtn = document.getElementById("save"); // Get the save button
+const saveBtn = document.getElementById("save");
 
 // --- PERSISTENCE LOGIC ---
 
 async function saveAllData() {
   const data = {};
   fields.forEach(id => data[`saved_${id}`] = els[id].value);
-  // Using sync so your settings follow your Chrome profile
   await chrome.storage.sync.set(data);
-  console.log("Data saved automatically");
 }
 
 async function loadSavedData() {
   const keys = fields.map(id => `saved_${id}`);
-  // FIXED: Changed chrome.storage.get to chrome.storage.sync.get
   const data = await chrome.storage.sync.get(keys);
-  
   fields.forEach(id => { 
-    if (data[`saved_${id}`] !== undefined) {
-      els[id].value = data[`saved_${id}`];
-    }
+    if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`]; 
   });
 }
 
-// Add listeners to every input to save as you type
 fields.forEach(id => {
   els[id].addEventListener("change", saveAllData);
   els[id].addEventListener("input", saveAllData);
 });
 
-// Manual save button feedback
 saveBtn.addEventListener("click", async () => {
   await saveAllData();
   statusEl.textContent = "Settings saved!";
@@ -46,12 +38,42 @@ saveBtn.addEventListener("click", async () => {
 
 runBtn.addEventListener("click", async () => {
   const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
+  
   if (lines.length === 0) {
     statusEl.textContent = "Error: No data found.";
     statusEl.style.color = "red";
     return;
   }
 
+  // 1. Create Date Objects for Comparison
+  const now = new Date();
+  const selectedStart = new Date(`${els.startDate.value}T${els.startTime.value}`);
+  const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
+  
+  // 2. Validate Start Time (at least 30 mins in future)
+  const diffMs = selectedStart - now;
+  const diffMins = diffMs / (1000 * 60);
+
+  if (isNaN(selectedStart.getTime()) || isNaN(selectedDue.getTime())) {
+    statusEl.textContent = "Error: Please enter valid dates and times.";
+    statusEl.style.color = "red";
+    return;
+  }
+
+  if (diffMins < 30) {
+    statusEl.textContent = "⚠️ Start time must be at least 30 mins in the future.";
+    statusEl.style.color = "orange";
+    return;
+  }
+
+  // 3. Validate Due Date (must be after Start Date)
+  if (selectedDue <= selectedStart) {
+    statusEl.textContent = "⚠️ Due date must be AFTER the start date.";
+    statusEl.style.color = "orange";
+    return;
+  }
+
+  // 4. Proceed with Automation
   const students = lines.map(line => {
     const parts = line.split(',');
     return { 
@@ -69,7 +91,6 @@ runBtn.addEventListener("click", async () => {
     dueTime: els.dueTime.value
   };
 
-  // Save the run-state to local (volatile) storage
   await chrome.storage.local.set({ 
     "activeQueue": students, 
     "batchSettings": settings,
@@ -81,9 +102,7 @@ runBtn.addEventListener("click", async () => {
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab) {
-      chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
-          console.log("Tab not ready. Automation will start on next page load.");
-      });
+      chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {});
   }
 });
 
@@ -100,5 +119,4 @@ document.getElementById("stop").addEventListener("click", async () => {
     statusEl.style.color = "red";
 });
 
-// Initialize on open
 loadSavedData();
