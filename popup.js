@@ -4,7 +4,7 @@ fields.forEach(id => els[id] = document.getElementById(id));
 
 const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
-const getInfoBtn = document.getElementById("getInfo"); // New Reference
+const getInfoBtn = document.getElementById("getInfo");
 
 // --- URL CHECKER ---
 async function checkUrl() {
@@ -16,33 +16,28 @@ async function checkUrl() {
   }
 }
 
-// --- SCRAPER FUNCTION (Runs in the website tab) ---
+// --- SCRAPER FUNCTION ---
 function scrapeStudentData() {
   const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
-
   function getTopicsFromSlide(slide) {
     if (!slide) return [];
     const topicDivs = Array.from(slide.querySelectorAll('div[class*="bg-secondary"][class*="leading-tight"]'));
     const topics = topicDivs.map(d => d.textContent.trim()).filter(Boolean);
     return [...new Set(topics)];
   }
-
   function getSlideDateLabel(slide) {
     if (!slide) return null;
     const dateSpan = slide.querySelector('span[title][class*="truncate"]') || slide.querySelector('span[title]');
     return dateSpan ? dateSpan.textContent.trim() : null;
   }
-
   const results = studentLis.map(li => {
     const nameEl = li.querySelector("span.truncate.inline-block");
     if (!nameEl) return null;
     const name = nameEl.getAttribute("title") || nameEl.textContent.trim();
     const slides = Array.from(li.querySelectorAll(".swiper-slide"));
-
     const todaySlide = slides.find(s => s.textContent.includes("Today"));
     const todayTopics = getTopicsFromSlide(todaySlide);
     if (todayTopics.length) return `${name}, ${todayTopics.join(", ")}`;
-
     const latestWithTopics = slides.map(slide => ({ slide, topics: getTopicsFromSlide(slide) })).find(x => x.topics.length);
     if (latestWithTopics) {
       const dateLabel = getSlideDateLabel(latestWithTopics.slide);
@@ -51,23 +46,13 @@ function scrapeStudentData() {
     }
     return `${name}, NO TOPIC FOUND`;
   }).filter(Boolean);
-
   return results.join("\n");
 }
 
-// --- BUTTON EVENT LISTENERS ---
-
 getInfoBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  
-  chrome.scripting.executeScript({
-    target: { tabId: tab.id },
-    func: scrapeStudentData
-  }, (injectionResults) => {
-    const result = injectionResults[0].result;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(result).then(() => {
+  chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
+    navigator.clipboard.writeText(injectionResults[0].result).then(() => {
       statusEl.textContent = "✅ Info copied to clipboard!";
       statusEl.style.color = "green";
       setTimeout(() => { statusEl.textContent = ""; }, 3000);
@@ -75,8 +60,7 @@ getInfoBtn.addEventListener("click", async () => {
   });
 });
 
-// ... Keep existing Run/Stop/Save/Load logic below ...
-
+// --- PERSISTENCE ---
 async function saveAllData() {
   const data = {};
   fields.forEach(id => data[`saved_${id}`] = els[id].value);
@@ -96,26 +80,61 @@ fields.forEach(id => {
   els[id].addEventListener("input", saveAllData);
 });
 
+// --- RUN AUTOMATION ---
 runBtn.addEventListener("click", async () => {
-  // ... (Keep your existing validation and run logic here) ...
-  const now = new Date();
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab.url.includes("app.century.tech/teach/assignments")) {
+    statusEl.textContent = "⚠️ Error: You are not on the right page for this to work.";
+    statusEl.style.color = "red";
+    return;
+  }
+
   const selectedStart = new Date(`${els.startDate.value}T${els.startTime.value}`);
   const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
-  if (selectedDue <= selectedStart) { statusEl.textContent = "⚠️ Due date must be AFTER start date."; return; }
+  if (selectedDue <= selectedStart) { 
+    statusEl.textContent = "⚠️ Due date must be AFTER start date."; 
+    statusEl.style.color = "red";
+    return; 
+  }
   
-  // (Standard Run Logic)
   const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
   const students = lines.map(line => ({ name: line.split(',')[0]?.trim(), topic: line.split(',')[1]?.trim() }));
-  await chrome.storage.local.set({ "activeQueue": students, "batchSettings": { day: els.day.value, subject: els.subject.value, startDate: els.startDate.value, startTime: els.startTime.value, dueDate: els.dueDate.value, dueTime: els.dueTime.value }, "isPaused": false });
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab) chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" });
+  
+  await chrome.storage.local.set({ 
+    "activeQueue": students, 
+    "batchSettings": { 
+      day: els.day.value, 
+      subject: els.subject.value, 
+      startDate: els.startDate.value, 
+      startTime: els.startTime.value, 
+      dueDate: els.dueDate.value, 
+      dueTime: els.dueTime.value 
+    }, 
+    "isPaused": false 
+  });
+
+  statusEl.textContent = "🚀 Starting batch...";
+  statusEl.style.color = "blue";
+
+  chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
+    chrome.tabs.reload(tab.id);
+  });
+});
+
+// --- STATUS MESSAGE LISTENER ---
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "BATCH_COMPLETE") {
+    statusEl.textContent = "✅ All Assignments Done!";
+    statusEl.style.color = "green";
+  }
 });
 
 document.getElementById("stop").addEventListener("click", async () => {
     await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
     statusEl.textContent = "Stopped.";
+    statusEl.style.color = "red";
 });
 
-// Initialize
 checkUrl();
 loadSavedData();

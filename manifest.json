@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Assignment Student Picker",
-  "version": "1.0.0",
+  "name": "Solo - Assignment Student Picker",
+  "version": "1.0.1",
   "permissions": ["activeTab", "scripting", "storage", "clipboardWrite"],
   "host_permissions": [
     "https://app.century.tech/*",
@@ -9,5 +9,12 @@
   ],
   "action": {
     "default_popup": "popup.html"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://app.century.tech/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }
