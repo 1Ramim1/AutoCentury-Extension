@@ -6,7 +6,6 @@ const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
 const getInfoBtn = document.getElementById("getInfo");
 
-// --- URL CHECKER ---
 async function checkUrl() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.url?.includes("tutor.tnx.dev/1/dashboard")) {
@@ -16,7 +15,6 @@ async function checkUrl() {
   }
 }
 
-// --- SCRAPER FUNCTION ---
 function scrapeStudentData() {
   const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
   function getTopicsFromSlide(slide) {
@@ -60,7 +58,6 @@ getInfoBtn.addEventListener("click", async () => {
   });
 });
 
-// --- PERSISTENCE ---
 async function saveAllData() {
   const data = {};
   fields.forEach(id => data[`saved_${id}`] = els[id].value);
@@ -80,7 +77,6 @@ fields.forEach(id => {
   els[id].addEventListener("input", saveAllData);
 });
 
-// --- RUN AUTOMATION ---
 runBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
@@ -99,10 +95,13 @@ runBtn.addEventListener("click", async () => {
   }
   
   const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
+  if (lines.length === 0) return;
+
   const students = lines.map(line => ({ name: line.split(',')[0]?.trim(), topic: line.split(',')[1]?.trim() }));
   
   await chrome.storage.local.set({ 
     "activeQueue": students, 
+    "totalInBatch": students.length, // Store the total count for the display
     "batchSettings": { 
       day: els.day.value, 
       subject: els.subject.value, 
@@ -114,7 +113,7 @@ runBtn.addEventListener("click", async () => {
     "isPaused": false 
   });
 
-  statusEl.textContent = "🚀 Starting batch...";
+  statusEl.textContent = `Creating assignment 1 of ${students.length}`;
   statusEl.style.color = "blue";
 
   chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
@@ -122,8 +121,11 @@ runBtn.addEventListener("click", async () => {
   });
 });
 
-// --- STATUS MESSAGE LISTENER ---
 chrome.runtime.onMessage.addListener((msg) => {
+  if (msg.type === "UPDATE_STATUS") {
+    statusEl.textContent = msg.text;
+    statusEl.style.color = "blue";
+  }
   if (msg.type === "BATCH_COMPLETE") {
     statusEl.textContent = "✅ All Assignments Done!";
     statusEl.style.color = "green";

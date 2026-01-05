@@ -3,7 +3,6 @@
 
   const quickWait = (ms) => new Promise(res => setTimeout(res, ms));
 
-  // Helper to capitalize words (e.g., "monesha ahmed" -> "Monesha Ahmed")
   const capitalize = (str) => {
     if (!str) return "";
     return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -39,11 +38,9 @@
   }
 
   async function runSingleAssignment(studentName, topic, settings, signal) {
-    // 1. Dashboard -> Modal
     (await waitFor('[data-testid="create-assignment-button"]', 10000, document, signal)).click();
     (await waitFor('[data-testid="for-students-button"]', 10000, document, signal)).click();
     
-    // 2. Search & Select Student
     const modal = await waitFor('[role="dialog"]', 10000, document, signal);
     const search = await waitFor('.rc-search-box--large [data-testid="search-input"]', 5000, modal, signal);
     setNativeValue(search, studentName);
@@ -53,8 +50,6 @@
     pointerTap(row.querySelector("label.cds-checkbox__input-label") || row);
     (await waitFor('[data-testid="next-button"]', 5000, modal, signal)).click();
 
-    // 3. Fill Form with New Naming Convention
-    // Formatting: Name (Cap) - Topic (Cap) HW - Day (3 letters) Class
     const capName = capitalize(studentName);
     const capTopic = capitalize(topic);
     const shortDay = settings.day.substring(0, 3);
@@ -73,7 +68,6 @@
 
     (await waitFor('[data-testid="teacher-assignment-modal-create-button"]', 5000, document, signal)).click();
 
-    // 4. Mathematics Course Selection
     pointerTap(await waitFor('[data-testid="td-assignment-nuggets-widget-add-button"]', 10000, document, signal));
     
     if (settings.subject === "Mathematics") {
@@ -89,7 +83,6 @@
         }
     }
 
-    // 5. Search Topic & Add
     const nInput = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 8000, document, signal);
     setNativeValue(nInput, topic);
     await quickWait(800);
@@ -109,7 +102,6 @@
         }
     }
 
-    // 6. Navigate Back
     await quickWait(2500);
     const backLink = document.querySelector('a[href="/teach/assignments"]') || 
                      Array.from(document.querySelectorAll('a, button')).find(el => el.textContent.trim() === 'Back');
@@ -117,27 +109,32 @@
   }
 
   async function resumeBatch() {
-    const data = await chrome.storage.local.get(["activeQueue", "batchSettings", "isPaused"]);
+    const data = await chrome.storage.local.get(["activeQueue", "batchSettings", "isPaused", "totalInBatch"]);
     
     if (data.isPaused) return;
 
     if (!data.activeQueue || data.activeQueue.length === 0) {
-        // If we load the page and the queue is empty, trigger the Done signal
         chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
         return;
     }
 
     if (window.location.href.includes('/teach/assignments')) {
       const current = data.activeQueue[0];
+      const total = data.totalInBatch || data.activeQueue.length;
+      const currentNum = total - data.activeQueue.length + 1;
+
+      // Send status update to popup
+      chrome.runtime.sendMessage({ 
+        type: "UPDATE_STATUS", 
+        text: `Creating assignment ${currentNum} of ${total}` 
+      }).catch(() => {});
       
       try {
         await runSingleAssignment(current.name, current.topic, data.batchSettings, abortController.signal);
         
-        // Remove processed student and update storage
         const newQueue = data.activeQueue.slice(1);
         await chrome.storage.local.set({ "activeQueue": newQueue });
         
-        // If that was the last student, trigger done immediately
         if (newQueue.length === 0) {
             chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
         }
