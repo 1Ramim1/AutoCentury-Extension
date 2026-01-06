@@ -95,13 +95,13 @@
     setNativeValue(await waitFor('[data-testid="date-picker-dueDate"]', 2000, document, signal), settings.dueDate);
     setNativeValue(await waitFor('[data-testid="time-picker-dueTime"]', 2000, document, signal), settings.dueTime);
 
-    // Final click to create the assignment shell
     (await waitFor('[data-testid="teacher-assignment-modal-create-button"]', 5000, document, signal)).click();
 
     // --- CONDITIONAL NUGGET AUTOMATION ---
     if (settings.nuggetAutomation) {
-        console.log("🛠 Nugget Automation is ON. Searching for topics...");
+        console.log("🛠 Nugget Automation is ON.");
         
+        // MOVED INSIDE: Only wait for "+ Add" button if we actually intend to click it
         pointerTap(await waitFor('[data-testid="td-assignment-nuggets-widget-add-button"]', 10000, document, signal));
         
         // --- START DYNAMIC COURSE SELECTION LOGIC ---
@@ -165,11 +165,11 @@
             }
         }
     } else {
-        console.log("⏩ Nugget Automation is OFF. Skipping topic search.");
+        console.log("⏩ Nugget Automation is OFF. Skipping wait for Add Button.");
     }
 
-    // This part runs regardless of the checkbox to return to dashboard
-    await quickWait(2500);
+    // Now this runs immediately if nuggetAutomation is false
+    await quickWait(750); 
     const backLink = document.querySelector('a[href="/teach/assignments"]') || 
                      Array.from(document.querySelectorAll('a, button')).find(el => el.textContent.trim() === 'Back');
     if (backLink) pointerTap(backLink);
