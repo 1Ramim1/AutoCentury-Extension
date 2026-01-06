@@ -16,6 +16,7 @@ async function checkUrl() {
 }
 
 function scrapeStudentData() {
+  console.log("Scraping students...");
   const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
   function getTopicsFromSlide(slide) {
     if (!slide) return [];
@@ -51,7 +52,8 @@ getInfoBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
     navigator.clipboard.writeText(injectionResults[0].result).then(() => {
-      statusEl.textContent = "✅ Info copied to clipboard!";
+      console.log("Data copied.");
+      statusEl.textContent = "✅ Info copied!";
       statusEl.style.color = "green";
       setTimeout(() => { statusEl.textContent = ""; }, 3000);
     });
@@ -78,31 +80,62 @@ fields.forEach(id => {
 });
 
 runBtn.addEventListener("click", async () => {
+  console.log("Starting batch...");
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  
   if (!tab.url.includes("app.century.tech/teach/assignments")) {
-    statusEl.textContent = "⚠️ Error: You are not on the right page for this to work.";
+    statusEl.textContent = "⚠️ Error: Wrong page.";
     statusEl.style.color = "red";
     return;
   }
+
+  // --- VALIDATION LOGIC ---
+  const now = new Date();
   const selectedStart = new Date(`${els.startDate.value}T${els.startTime.value}`);
   const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
+  
+  // Requirement: Start must be at least 30 mins in future
+  const thirtyMinsFromNow = new Date(now.getTime() + 30 * 60000);
+
+  if (selectedStart < thirtyMinsFromNow) {
+    console.warn("Validation failed: Start time too early.");
+    statusEl.textContent = "⚠️ Start time must be at least 30 mins in future.";
+    statusEl.style.color = "red";
+    return;
+  }
+
   if (selectedDue <= selectedStart) { 
+    console.warn("Validation failed: Due date before start date.");
     statusEl.textContent = "⚠️ Due date must be AFTER start date."; 
     statusEl.style.color = "red";
     return; 
   }
+  // -------------------------
+
   const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
   if (lines.length === 0) return;
+  
   const students = lines.map(line => ({ name: line.split(',')[0]?.trim(), topic: line.split(',')[1]?.trim() }));
+  
   await chrome.storage.local.set({ 
     "activeQueue": students, 
     "totalInBatch": students.length,
-    "batchSettings": { day: els.day.value, subject: els.subject.value, startDate: els.startDate.value, startTime: els.startTime.value, dueDate: els.dueDate.value, dueTime: els.dueTime.value }, 
+    "batchSettings": { 
+      day: els.day.value, 
+      subject: els.subject.value, 
+      startDate: els.startDate.value, 
+      startTime: els.startTime.value, 
+      dueDate: els.dueDate.value, 
+      dueTime: els.dueTime.value 
+    }, 
     "isPaused": false 
   });
+
   statusEl.textContent = `Creating assignment 1 of ${students.length}`;
   statusEl.style.color = "blue";
+  
   chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
+    console.log("Content script not ready, reloading...");
     chrome.tabs.reload(tab.id);
   });
 });
@@ -112,18 +145,18 @@ chrome.runtime.onMessage.addListener((msg) => {
     statusEl.textContent = msg.text;
     statusEl.style.color = "blue";
   }
-  // NEW LISTENER CASE FOR SKIPPED STUDENTS
   if (msg.type === "STUDENT_SKIPPED") {
     statusEl.textContent = msg.text;
     statusEl.style.color = "orange";
   }
   if (msg.type === "BATCH_COMPLETE") {
-    statusEl.textContent = "✅ All Assignments Done!";
+    statusEl.textContent = "✅ Done!";
     statusEl.style.color = "green";
   }
 });
 
 document.getElementById("stop").addEventListener("click", async () => {
+    console.log("Automation stopped.");
     await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
     statusEl.textContent = "Stopped.";
     statusEl.style.color = "red";

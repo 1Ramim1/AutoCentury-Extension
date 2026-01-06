@@ -51,17 +51,22 @@
   }
 
   async function runSingleAssignment(studentName, topic, settings, signal) {
+    console.log(`🔍 Processing: ${studentName}`);
+    
     (await waitFor('[data-testid="create-assignment-button"]', 10000, document, signal)).click();
     (await waitFor('[data-testid="for-students-button"]', 10000, document, signal)).click();
     
     const modal = await waitFor('[role="dialog"]', 10000, document, signal);
     const search = await waitFor('.rc-search-box--large [data-testid="search-input"]', 5000, modal, signal);
+    
+    console.log(`⌨️ Typing name...`);
     setNativeValue(search, studentName);
     modal.querySelector('.rc-search-box--large [data-testid="search-btn"]')?.click();
     
     const result = await waitForSearchResult(modal, 15000, signal);
 
     if (!result.found) {
+      console.warn(`❌ Student not found: ${studentName}`);
       const cancelBtn = modal.querySelector('[data-testid="cancel-button"]') || 
                         Array.from(modal.querySelectorAll('button')).find(b => b.textContent.includes('Cancel'));
       if (cancelBtn) cancelBtn.click();
@@ -69,6 +74,7 @@
       throw new Error("SKIP_STUDENT");
     }
 
+    console.log(`✅ Selecting student row...`);
     pointerTap(result.element.querySelector("label.cds-checkbox__input-label") || result.element);
     (await waitFor('[data-testid="next-button"]', 5000, modal, signal)).click();
 
@@ -77,19 +83,23 @@
     const shortDay = settings.day.substring(0, 3);
     const newAssignmentName = `${capName} - ${capTopic} HW - ${shortDay} Class`;
 
+    console.log(`📝 Setting title: ${newAssignmentName}`);
     setNativeValue(await waitFor('[data-testid="text-input-assignmentName"]', 8000, document, signal), newAssignmentName);
     
     const subSelect = await waitFor('select#select.cds-select', 5000, document, signal);
     const opt = Array.from(subSelect.options).find(o => o.text.trim().includes(settings.subject === "Mathematics" ? "Mathematics" : settings.subject));
     if (opt) { subSelect.value = opt.value; subSelect.dispatchEvent(new Event('change', { bubbles: true })); }
 
+    console.log(`📅 Setting dates...`);
     setNativeValue(await waitFor('[data-testid="date-picker-startDate"]', 2000, document, signal), settings.startDate);
     setNativeValue(await waitFor('[data-testid="time-picker-startTime"]', 2000, document, signal), settings.startTime);
     setNativeValue(await waitFor('[data-testid="date-picker-dueDate"]', 2000, document, signal), settings.dueDate);
     setNativeValue(await waitFor('[data-testid="time-picker-dueTime"]', 2000, document, signal), settings.dueTime);
 
+    console.log(`🔨 Creating assignment...`);
     (await waitFor('[data-testid="teacher-assignment-modal-create-button"]', 5000, document, signal)).click();
 
+    console.log(`📚 Adding nugget...`);
     pointerTap(await waitFor('[data-testid="td-assignment-nuggets-widget-add-button"]', 10000, document, signal));
     
     if (settings.subject === "Mathematics") {
@@ -106,6 +116,7 @@
     }
 
     const nInput = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 8000, document, signal);
+    console.log(`🔎 Searching for nugget: ${topic}`);
     setNativeValue(nInput, topic);
     await quickWait(800);
     const searchBtn = (nInput.closest('.rc-search-box') || nInput.parentElement).querySelector('button[data-testid="search-btn"]');
@@ -125,15 +136,19 @@
     }
 
     await quickWait(2500);
+    console.log(`🔙 Returning to list.`);
     const backLink = document.querySelector('a[href="/teach/assignments"]') || 
                      Array.from(document.querySelectorAll('a, button')).find(el => el.textContent.trim() === 'Back');
     if (backLink) pointerTap(backLink);
   }
 
-  async function resumeBatch() {
+async function resumeBatch() {
+    console.log("🔄 Automation check...");
     const data = await chrome.storage.local.get(["activeQueue", "batchSettings", "isPaused", "totalInBatch"]);
+    
     if (data.isPaused) return;
     if (!data.activeQueue || data.activeQueue.length === 0) {
+        console.log("🏁 Queue empty.");
         chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
         return;
     }
@@ -143,6 +158,7 @@
       const total = data.totalInBatch || data.activeQueue.length;
       const currentNum = total - data.activeQueue.length + 1;
 
+      console.log(`🚀 Starting student ${currentNum}/${total}`);
       chrome.runtime.sendMessage({ 
         type: "UPDATE_STATUS", 
         text: `Creating assignment ${currentNum} of ${total}` 
@@ -150,14 +166,19 @@
       
       try {
         await runSingleAssignment(current.name, current.topic, data.batchSettings, abortController.signal);
+        
+        console.log("✅ Success. Saving queue...");
         const newQueue = data.activeQueue.slice(1);
         await chrome.storage.local.set({ "activeQueue": newQueue });
+        
         if (newQueue.length === 0) {
             chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
+        } else {
+            window.location.reload(); 
         }
       } catch (e) {
         if (e.message === "SKIP_STUDENT") {
-           // SEND SKIP MESSAGE TO POPUP
+           console.warn(`⚠️ Skipping student.`);
            chrome.runtime.sendMessage({ 
              type: "STUDENT_SKIPPED", 
              text: `⚠️ Skipping: ${current.name} (Not found)` 
@@ -166,11 +187,10 @@
            const newQueue = data.activeQueue.slice(1);
            await chrome.storage.local.set({ "activeQueue": newQueue });
            
-           // Wait 2 seconds so user can actually read the skip message before reload
-           await quickWait(1000);
+           await quickWait(1500);
            window.location.reload(); 
         } else {
-           console.error("Batch Step Failed:", e.message);
+           console.error("❌ Error:", e.message);
         }
       }
     }
@@ -184,5 +204,11 @@
     }
   });
 
-  resumeBatch();
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(resumeBatch, 1500);
+  } else {
+    window.addEventListener("DOMContentLoaded", () => {
+      setTimeout(resumeBatch, 1500);
+    });
+  }
 })();
