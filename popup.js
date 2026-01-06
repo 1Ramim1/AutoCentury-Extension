@@ -79,13 +79,11 @@ fields.forEach(id => {
 
 runBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
   if (!tab.url.includes("app.century.tech/teach/assignments")) {
     statusEl.textContent = "⚠️ Error: You are not on the right page for this to work.";
     statusEl.style.color = "red";
     return;
   }
-
   const selectedStart = new Date(`${els.startDate.value}T${els.startTime.value}`);
   const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
   if (selectedDue <= selectedStart) { 
@@ -93,29 +91,17 @@ runBtn.addEventListener("click", async () => {
     statusEl.style.color = "red";
     return; 
   }
-  
   const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
   if (lines.length === 0) return;
-
   const students = lines.map(line => ({ name: line.split(',')[0]?.trim(), topic: line.split(',')[1]?.trim() }));
-  
   await chrome.storage.local.set({ 
     "activeQueue": students, 
-    "totalInBatch": students.length, // Store the total count for the display
-    "batchSettings": { 
-      day: els.day.value, 
-      subject: els.subject.value, 
-      startDate: els.startDate.value, 
-      startTime: els.startTime.value, 
-      dueDate: els.dueDate.value, 
-      dueTime: els.dueTime.value 
-    }, 
+    "totalInBatch": students.length,
+    "batchSettings": { day: els.day.value, subject: els.subject.value, startDate: els.startDate.value, startTime: els.startTime.value, dueDate: els.dueDate.value, dueTime: els.dueTime.value }, 
     "isPaused": false 
   });
-
   statusEl.textContent = `Creating assignment 1 of ${students.length}`;
   statusEl.style.color = "blue";
-
   chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
     chrome.tabs.reload(tab.id);
   });
@@ -125,6 +111,11 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "UPDATE_STATUS") {
     statusEl.textContent = msg.text;
     statusEl.style.color = "blue";
+  }
+  // NEW LISTENER CASE FOR SKIPPED STUDENTS
+  if (msg.type === "STUDENT_SKIPPED") {
+    statusEl.textContent = msg.text;
+    statusEl.style.color = "orange";
   }
   if (msg.type === "BATCH_COMPLETE") {
     statusEl.textContent = "✅ All Assignments Done!";

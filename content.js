@@ -37,6 +37,19 @@
     throw new Error(`Timeout: ${selector}`);
   }
 
+  async function waitForSearchResult(modal, timeoutMs = 15000, signal) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (signal?.aborted) throw new Error("Aborted");
+      const row = modal.querySelector('tbody tr.rc-table-row-clickable');
+      const noData = modal.querySelector('.no-data-message');
+      if (row) return { found: true, element: row };
+      if (noData) return { found: false };
+      await new Promise(r => setTimeout(r, 100));
+    }
+    throw new Error("Search Timeout");
+  }
+
   async function runSingleAssignment(studentName, topic, settings, signal) {
     (await waitFor('[data-testid="create-assignment-button"]', 10000, document, signal)).click();
     (await waitFor('[data-testid="for-students-button"]', 10000, document, signal)).click();
@@ -46,8 +59,17 @@
     setNativeValue(search, studentName);
     modal.querySelector('.rc-search-box--large [data-testid="search-btn"]')?.click();
     
-    const row = await waitFor('tbody tr.rc-table-row-clickable', 8000, modal, signal);
-    pointerTap(row.querySelector("label.cds-checkbox__input-label") || row);
+    const result = await waitForSearchResult(modal, 15000, signal);
+
+    if (!result.found) {
+      const cancelBtn = modal.querySelector('[data-testid="cancel-button"]') || 
+                        Array.from(modal.querySelectorAll('button')).find(b => b.textContent.includes('Cancel'));
+      if (cancelBtn) cancelBtn.click();
+      await quickWait(1000);
+      throw new Error("SKIP_STUDENT");
+    }
+
+    pointerTap(result.element.querySelector("label.cds-checkbox__input-label") || result.element);
     (await waitFor('[data-testid="next-button"]', 5000, modal, signal)).click();
 
     const capName = capitalize(studentName);
@@ -110,9 +132,7 @@
 
   async function resumeBatch() {
     const data = await chrome.storage.local.get(["activeQueue", "batchSettings", "isPaused", "totalInBatch"]);
-    
     if (data.isPaused) return;
-
     if (!data.activeQueue || data.activeQueue.length === 0) {
         chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
         return;
@@ -123,7 +143,6 @@
       const total = data.totalInBatch || data.activeQueue.length;
       const currentNum = total - data.activeQueue.length + 1;
 
-      // Send status update to popup
       chrome.runtime.sendMessage({ 
         type: "UPDATE_STATUS", 
         text: `Creating assignment ${currentNum} of ${total}` 
@@ -131,15 +150,28 @@
       
       try {
         await runSingleAssignment(current.name, current.topic, data.batchSettings, abortController.signal);
-        
         const newQueue = data.activeQueue.slice(1);
         await chrome.storage.local.set({ "activeQueue": newQueue });
-        
         if (newQueue.length === 0) {
             chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
         }
       } catch (e) {
-        console.error("Batch Step Failed:", e.message);
+        if (e.message === "SKIP_STUDENT") {
+           // SEND SKIP MESSAGE TO POPUP
+           chrome.runtime.sendMessage({ 
+             type: "STUDENT_SKIPPED", 
+             text: `⚠️ Skipping: ${current.name} (Not found)` 
+           }).catch(() => {});
+
+           const newQueue = data.activeQueue.slice(1);
+           await chrome.storage.local.set({ "activeQueue": newQueue });
+           
+           // Wait 2 seconds so user can actually read the skip message before reload
+           await quickWait(1000);
+           window.location.reload(); 
+        } else {
+           console.error("Batch Step Failed:", e.message);
+        }
       }
     }
   }
