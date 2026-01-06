@@ -129,8 +129,8 @@ runBtn.addEventListener("click", async () => {
         statusEl.style.color = "red";
         return;
       }
-      if (!['base', 'aqa', 'edexcel'].includes(board)) {
-        statusEl.textContent = `⚠️ Format incorrect: "${args[3]}" is not base, aqa, or edexcel.`;
+      if (!['base', 'aqa', 'edexcel', 'ks3'].includes(board)) {
+        statusEl.textContent = `⚠️ Format incorrect: "${args[3]}" is not aqa, edexcel, base or ks3.`;
         statusEl.style.color = "red";
         return;
       }
