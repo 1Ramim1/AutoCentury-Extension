@@ -95,76 +95,80 @@
     setNativeValue(await waitFor('[data-testid="date-picker-dueDate"]', 2000, document, signal), settings.dueDate);
     setNativeValue(await waitFor('[data-testid="time-picker-dueTime"]', 2000, document, signal), settings.dueTime);
 
+    // Final click to create the assignment shell
     (await waitFor('[data-testid="teacher-assignment-modal-create-button"]', 5000, document, signal)).click();
 
-    pointerTap(await waitFor('[data-testid="td-assignment-nuggets-widget-add-button"]', 10000, document, signal));
-    
-    // --- START DYNAMIC COURSE SELECTION LOGIC ---
-    let targetCourseId = null;
-
-    if (settings.subject === "Mathematics") {
-        targetCourseId = "88dc59ab-6ede-46f2-831b-c3513c14f216"; // Mathematics Secondary (H)
-    } 
-    else if (settings.subject === "Science" && studentData.scienceSub && studentData.scienceBoard) {
-        const sub = studentData.scienceSub.toLowerCase();
-        const board = studentData.scienceBoard.toLowerCase();
-
-        // Mapping logic based on your requirements and HTML values
-        if (sub === 'bio') {
-            if (board === 'edexcel') targetCourseId = "6733d990-e454-402e-8972-0e25196521e5"; // Edexcel (H)
-            else if (board === 'aqa') targetCourseId = "cbdbbf43-46d3-49bf-904e-b8288c727394"; // AQA (H)
-            else if (board === 'ks3') targetCourseId = "b3df9fbf-0962-4439-bb89-7d0fcc887ca0"; // Biology KS3
-            else if (board === 'base') targetCourseId = "5e4482d1-4e81-4ffc-9e9a-5daa85b2fb75"; // Biology GCSE
+    // --- CONDITIONAL NUGGET AUTOMATION ---
+    if (settings.nuggetAutomation) {
+        console.log("🛠 Nugget Automation is ON. Searching for topics...");
+        
+        pointerTap(await waitFor('[data-testid="td-assignment-nuggets-widget-add-button"]', 10000, document, signal));
+        
+        // --- START DYNAMIC COURSE SELECTION LOGIC ---
+        let targetCourseId = null;
+        if (settings.subject === "Mathematics") {
+            targetCourseId = "88dc59ab-6ede-46f2-831b-c3513c14f216";
         } 
-        else if (sub === 'chem' || sub === 'chemistry') {
-            if (board === 'edexcel') targetCourseId = "0a5541be-32ff-4f04-847b-c0a790cd0fa5"; // Edexcel (H)
-            else if (board === 'aqa') targetCourseId = "cb7e6586-514b-465e-a618-ecae26bd9dd4"; // AQA (H)
-            else if (board === 'ks3') targetCourseId = "01324b05-aeda-44ae-8851-d54909ced30a"; // Chemistry KS3
-            else if (board === 'base') targetCourseId = "fce3e428-4df0-4c5a-8693-0aef611f01de"; // Chemistry GCSE
-        } 
-        else if (sub === 'phy' || sub === 'physics') {
-            if (board === 'edexcel') targetCourseId = "060c1551-3592-4bbc-ab74-da98cbe5a65d"; // Edexcel (H)
-            else if (board === 'aqa') targetCourseId = "9219bba2-8939-4511-91a7-12f78ce15519"; // AQA (H)
-            else if (board === 'ks3') targetCourseId = "02dd6a47-6716-45f1-b78c-70bf4e74e0c2"; // Physics KS3
-            else if (board === 'base') targetCourseId = "fb35f799-e198-466b-ba23-84175ce39fde"; // Physics GCSE
-        }
-    }
-
-    if (targetCourseId) {
-        console.log(`🎯 Target Course ID identified: ${targetCourseId}`);
-        const start = Date.now();
-        while (Date.now() - start < 10000 && !signal.aborted) {
-            const courseSelect = document.querySelector('select[name="course"]') || document.querySelector('select.cds-select');
-            if (courseSelect && Array.from(courseSelect.options).some(o => o.value === targetCourseId)) {
-                courseSelect.value = targetCourseId; 
-                courseSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                await quickWait(1500); 
-                break;
+        else if (settings.subject === "Science" && studentData.scienceSub && studentData.scienceBoard) {
+            const sub = studentData.scienceSub.toLowerCase();
+            const board = studentData.scienceBoard.toLowerCase();
+            if (sub === 'bio') {
+                if (board === 'edexcel') targetCourseId = "6733d990-e454-402e-8972-0e25196521e5";
+                else if (board === 'aqa') targetCourseId = "cbdbbf43-46d3-49bf-904e-b8288c727394";
+                else if (board === 'ks3') targetCourseId = "b3df9fbf-0962-4439-bb89-7d0fcc887ca0";
+                else if (board === 'base') targetCourseId = "5e4482d1-4e81-4ffc-9e9a-5daa85b2fb75";
+            } 
+            else if (sub === 'chem' || sub === 'chemistry') {
+                if (board === 'edexcel') targetCourseId = "0a5541be-32ff-4f04-847b-c0a790cd0fa5";
+                else if (board === 'aqa') targetCourseId = "cb7e6586-514b-465e-a618-ecae26bd9dd4";
+                else if (board === 'ks3') targetCourseId = "01324b05-aeda-44ae-8851-d54909ced30a";
+                else if (board === 'base') targetCourseId = "fce3e428-4df0-4c5a-8693-0aef611f01de";
+            } 
+            else if (sub === 'phy' || sub === 'physics') {
+                if (board === 'edexcel') targetCourseId = "060c1551-3592-4bbc-ab74-da98cbe5a65d";
+                else if (board === 'aqa') targetCourseId = "9219bba2-8939-4511-91a7-12f78ce15519";
+                else if (board === 'ks3') targetCourseId = "02dd6a47-6716-45f1-b78c-70bf4e74e0c2";
+                else if (board === 'base') targetCourseId = "fb35f799-e198-466b-ba23-84175ce39fde";
             }
-            await quickWait(500);
         }
-    }
-    // --- END DYNAMIC COURSE SELECTION LOGIC ---
 
-    const nInput = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 8000, document, signal);
-    setNativeValue(nInput, topic);
-    await quickWait(800);
-    const searchBtn = (nInput.closest('.rc-search-box') || nInput.parentElement).querySelector('button[data-testid="search-btn"]');
-    if (searchBtn) searchBtn.click(); else nInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    
-    await quickWait(2000);
-    const check = await waitFor('tbody tr.rc-table-row-clickable label.cds-checkbox__input-label', 5000, document, signal);
-    if (check) {
-        pointerTap(check);
-        await quickWait(1200);
-        const addBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim().toLowerCase() === 'add');
-        if (addBtn) {
-            ['mouseenter', 'mouseover', 'mousedown', 'mouseup', 'click'].forEach(t => 
-                addBtn.dispatchEvent(new MouseEvent(t, { view: window, bubbles: true, buttons: 1 }))
-            );
+        if (targetCourseId) {
+            const start = Date.now();
+            while (Date.now() - start < 10000 && !signal.aborted) {
+                const courseSelect = document.querySelector('select[name="course"]') || document.querySelector('select.cds-select');
+                if (courseSelect && Array.from(courseSelect.options).some(o => o.value === targetCourseId)) {
+                    courseSelect.value = targetCourseId; 
+                    courseSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                    await quickWait(1500); 
+                    break;
+                }
+                await quickWait(500);
+            }
         }
+
+        const nInput = await waitFor('input[placeholder="Search"][data-testid="search-input"]', 8000, document, signal);
+        setNativeValue(nInput, topic);
+        await quickWait(800);
+        const searchBtn = (nInput.closest('.rc-search-box') || nInput.parentElement).querySelector('button[data-testid="search-btn"]');
+        if (searchBtn) searchBtn.click(); else nInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        
+        await quickWait(2000);
+        const check = await waitFor('tbody tr.rc-table-row-clickable label.cds-checkbox__input-label', 5000, document, signal);
+        if (check) {
+            pointerTap(check);
+            await quickWait(1200);
+            const addBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim().toLowerCase() === 'add');
+            if (addBtn) {
+                ['mouseenter', 'mouseover', 'mousedown', 'mouseup', 'click'].forEach(t => 
+                    addBtn.dispatchEvent(new MouseEvent(t, { view: window, bubbles: true, buttons: 1 }))
+                );
+            }
+        }
+    } else {
+        console.log("⏩ Nugget Automation is OFF. Skipping topic search.");
     }
 
+    // This part runs regardless of the checkbox to return to dashboard
     await quickWait(2500);
     const backLink = document.querySelector('a[href="/teach/assignments"]') || 
                      Array.from(document.querySelectorAll('a, button')).find(el => el.textContent.trim() === 'Back');
