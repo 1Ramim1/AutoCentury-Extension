@@ -86,9 +86,24 @@
     console.log(`📝 Setting title: ${newAssignmentName}`);
     setNativeValue(await waitFor('[data-testid="text-input-assignmentName"]', 8000, document, signal), newAssignmentName);
     
+    // --- UPDATED SUBJECT SELECTION LOGIC ---
     const subSelect = await waitFor('select#select.cds-select', 5000, document, signal);
-    const opt = Array.from(subSelect.options).find(o => o.text.trim().includes(settings.subject === "Mathematics" ? "Mathematics" : settings.subject));
-    if (opt) { subSelect.value = opt.value; subSelect.dispatchEvent(new Event('change', { bubbles: true })); }
+    // Use exact match (===) so "Science" doesn't match "Life and Environmental Science"
+    const opt = Array.from(subSelect.options).find(o => o.text.trim() === settings.subject);
+    
+    if (opt) { 
+        console.log(`🎯 Subject matched: ${opt.text}`);
+        subSelect.value = opt.value; 
+        subSelect.dispatchEvent(new Event('change', { bubbles: true })); 
+    } else {
+        console.warn(`⚠️ Subject "${settings.subject}" not found exactly. Falling back to include search.`);
+        const fallbackOpt = Array.from(subSelect.options).find(o => o.text.trim().includes(settings.subject));
+        if (fallbackOpt) {
+            subSelect.value = fallbackOpt.value;
+            subSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+    // ---------------------------------------
 
     console.log(`📅 Setting dates...`);
     setNativeValue(await waitFor('[data-testid="date-picker-startDate"]', 2000, document, signal), settings.startDate);
