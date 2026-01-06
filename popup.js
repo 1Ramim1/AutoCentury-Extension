@@ -1,4 +1,5 @@
-const fields = ["day", "subject", "batchData", "startDate", "startTime", "dueDate", "dueTime"];
+// Added nuggetAutomation to the fields array
+const fields = ["day", "subject", "batchData", "startDate", "startTime", "dueDate", "dueTime", "nuggetAutomation"];
 const els = {};
 fields.forEach(id => els[id] = document.getElementById(id));
 
@@ -60,7 +61,14 @@ getInfoBtn.addEventListener("click", async () => {
 
 async function saveAllData() {
   const data = {};
-  fields.forEach(id => data[`saved_${id}`] = els[id].value);
+  fields.forEach(id => {
+    // Logic to handle checkbox vs text/select
+    if (els[id].type === "checkbox") {
+      data[`saved_${id}`] = els[id].checked;
+    } else {
+      data[`saved_${id}`] = els[id].value;
+    }
+  });
   await chrome.storage.sync.set(data);
 }
 
@@ -68,7 +76,13 @@ async function loadSavedData() {
   const keys = fields.map(id => `saved_${id}`);
   const data = await chrome.storage.sync.get(keys);
   fields.forEach(id => { 
-    if (data[`saved_${id}`] !== undefined) els[id].value = data[`saved_${id}`]; 
+    if (data[`saved_${id}`] !== undefined) {
+      if (els[id].type === "checkbox") {
+        els[id].checked = data[`saved_${id}`];
+      } else {
+        els[id].value = data[`saved_${id}`];
+      }
+    }
   });
 }
 
@@ -160,7 +174,8 @@ runBtn.addEventListener("click", async () => {
       startDate: els.startDate.value, 
       startTime: els.startTime.value, 
       dueDate: els.dueDate.value, 
-      dueTime: els.dueTime.value 
+      dueTime: els.dueTime.value,
+      nuggetAutomation: els.nuggetAutomation.checked // Added to batch settings
     }, 
     "isPaused": false 
   });

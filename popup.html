@@ -8,7 +8,8 @@
         body {
             font-family: system-ui, sans-serif;
             margin: 12px;
-            width: 360px;
+            width: 380px;
+            /* Slightly wider to accommodate larger text */
         }
 
         label {
@@ -59,12 +60,40 @@
 
         .row {
             display: flex;
-            gap: 8px;
+            gap: 12px;
             margin-top: 0;
+            align-items: center;
         }
 
         .row>div {
             flex: 1;
+        }
+
+        /* UPDATED: Larger Tick and Text */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            white-space: nowrap;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            width: 18px;
+            /* Bigger tick box */
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .checkbox-container label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 14px;
+            /* Bigger text */
+            font-weight: 700;
+            /* Extra bold */
+            color: #111827;
         }
 
         .status {
@@ -108,7 +137,16 @@
         <div><label for="dueTime">Due Time</label><input type="time" id="dueTime"></div>
     </div>
 
-    <button id="run" class="primary">Run Batch Automation</button>
+    <div class="row">
+        <div style="flex: 1.5;">
+            <button id="run" class="primary">Run Batch Automation</button>
+        </div>
+        <div class="checkbox-container">
+            <input type="checkbox" id="nuggetAutomation" checked>
+            <label for="nuggetAutomation">Nugget Automation</label>
+        </div>
+    </div>
+
     <button id="getInfo" class="secondary" style="background: #dbeafe; color: #1e40af; display: none;">Get Student
         Info</button>
     <button id="stop" class="secondary">Cancel Next Batch</button>
