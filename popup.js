@@ -36,14 +36,13 @@ function scrapeStudentData() {
     const slides = Array.from(li.querySelectorAll(".swiper-slide"));
     const todaySlide = slides.find(s => s.textContent.includes("Today"));
     const todayTopics = getTopicsFromSlide(todaySlide);
-    if (todayTopics.length) return `${name}, ${todayTopics.join(", ")}`;
+    if (todayTopics.length) return `${name}, ${todayTopics.join(", ")};`;
     const latestWithTopics = slides.map(slide => ({ slide, topics: getTopicsFromSlide(slide) })).find(x => x.topics.length);
     if (latestWithTopics) {
-      const dateLabel = getSlideDateLabel(latestWithTopics.slide);
       const topicText = latestWithTopics.topics.join(", ");
-      return dateLabel ? `${name}, ${topicText} (${dateLabel})` : `${name}, ${topicText}`;
+      return `${name}, ${topicText};`;
     }
-    return `${name}, NO TOPIC FOUND`;
+    return `${name}, NO TOPIC FOUND;`;
   }).filter(Boolean);
   return results.join("\n");
 }
@@ -52,7 +51,6 @@ getInfoBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
     navigator.clipboard.writeText(injectionResults[0].result).then(() => {
-      console.log("Data copied.");
       statusEl.textContent = "✅ Info copied!";
       statusEl.style.color = "green";
       setTimeout(() => { statusEl.textContent = ""; }, 3000);
@@ -80,7 +78,6 @@ fields.forEach(id => {
 });
 
 runBtn.addEventListener("click", async () => {
-  console.log("Starting batch...");
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
   if (!tab.url.includes("app.century.tech/teach/assignments")) {
@@ -89,37 +86,74 @@ runBtn.addEventListener("click", async () => {
     return;
   }
 
-  // --- VALIDATION LOGIC ---
+  // --- Date Validation ---
   const now = new Date();
   const selectedStart = new Date(`${els.startDate.value}T${els.startTime.value}`);
   const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
-  
-  // Requirement: Start must be at least 30 mins in future
   const thirtyMinsFromNow = new Date(now.getTime() + 30 * 60000);
 
   if (selectedStart < thirtyMinsFromNow) {
-    console.warn("Validation failed: Start time too early.");
     statusEl.textContent = "⚠️ Start time must be at least 30 mins in future.";
     statusEl.style.color = "red";
     return;
   }
-
   if (selectedDue <= selectedStart) { 
-    console.warn("Validation failed: Due date before start date.");
     statusEl.textContent = "⚠️ Due date must be AFTER start date."; 
     statusEl.style.color = "red";
     return; 
   }
-  // -------------------------
 
-  const lines = els.batchData.value.split('\n').filter(l => l.trim() !== "");
-  if (lines.length === 0) return;
-  
-  const students = lines.map(line => ({ name: line.split(',')[0]?.trim(), topic: line.split(',')[1]?.trim() }));
-  
+  // --- Semicolon Parsing & Validation ---
+  const rawData = els.batchData.value.trim();
+  if (!rawData) return;
+
+  // Split by semicolon
+  const blocks = rawData.split(';').map(b => b.trim()).filter(b => b !== "");
+  const processedStudents = [];
+  const isScience = (els.subject.value === "Science");
+
+  for (let block of blocks) {
+    const args = block.split(',').map(a => a.trim()).filter(a => a !== "");
+    
+    if (isScience) {
+      // REQUIRE 4 ARGS
+      if (args.length !== 4) {
+        statusEl.textContent = "⚠️ Format incorrect: Science requires 4 arguments per student.";
+        statusEl.style.color = "red";
+        return;
+      }
+      const sub = args[2].toLowerCase();
+      const board = args[3].toLowerCase();
+      if (!['phy', 'chem', 'bio'].includes(sub)) {
+        statusEl.textContent = `⚠️ Format incorrect: "${args[2]}" is not phy, chem, or bio.`;
+        statusEl.style.color = "red";
+        return;
+      }
+      if (!['base', 'aqa', 'edexcel'].includes(board)) {
+        statusEl.textContent = `⚠️ Format incorrect: "${args[3]}" is not base, aqa, or edexcel.`;
+        statusEl.style.color = "red";
+        return;
+      }
+    } else {
+      // REQUIRE 2 ARGS
+      if (args.length !== 2) {
+        statusEl.textContent = "⚠️ Format incorrect: Standard subjects require 2 arguments.";
+        statusEl.style.color = "red";
+        return;
+      }
+    }
+
+    processedStudents.push({ 
+      name: args[0], 
+      topic: args[1], 
+      scienceSub: isScience ? args[2] : null, 
+      scienceBoard: isScience ? args[3] : null 
+    });
+  }
+
   await chrome.storage.local.set({ 
-    "activeQueue": students, 
-    "totalInBatch": students.length,
+    "activeQueue": processedStudents, 
+    "totalInBatch": processedStudents.length,
     "batchSettings": { 
       day: els.day.value, 
       subject: els.subject.value, 
@@ -131,11 +165,10 @@ runBtn.addEventListener("click", async () => {
     "isPaused": false 
   });
 
-  statusEl.textContent = `Creating assignment 1 of ${students.length}`;
+  statusEl.textContent = `Creating assignment 1 of ${processedStudents.length}`;
   statusEl.style.color = "blue";
   
   chrome.tabs.sendMessage(tab.id, { type: "START_BATCH" }).catch(() => {
-    console.log("Content script not ready, reloading...");
     chrome.tabs.reload(tab.id);
   });
 });
@@ -156,7 +189,6 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 document.getElementById("stop").addEventListener("click", async () => {
-    console.log("Automation stopped.");
     await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
     statusEl.textContent = "Stopped.";
     statusEl.style.color = "red";
