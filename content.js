@@ -230,7 +230,7 @@ async function resumeBatch() {
   });
 
   if (document.readyState === "complete" || document.readyState === "interactive") {
-    setTimeout(resumeBatch, 1500);
+    setTimeout(resumeBatch, 1000);
   } else {
     window.addEventListener("DOMContentLoaded", () => {
       setTimeout(resumeBatch, 1500);
