@@ -37,11 +37,19 @@ function scrapeStudentData() {
     const todaySlide = slides.find(s => s.textContent.includes("Today"));
     const todayTopics = getTopicsFromSlide(todaySlide);
     if (todayTopics.length) return `${name}, ${todayTopics.join(", ")};`;
-    const latestWithTopics = slides.map(slide => ({ slide, topics: getTopicsFromSlide(slide) })).find(x => x.topics.length);
-    if (latestWithTopics) {
-      const topicText = latestWithTopics.topics.join(", ");
-      return `${name}, ${topicText};`;
-    }
+    if (todayTopics.length) return `${name}, ${todayTopics.join(", ")};`;
+
+        const latestWithTopics = slides.map(slide => ({ 
+          slide, 
+          topics: getTopicsFromSlide(slide),
+          date: getSlideDateLabel(slide) 
+        })).find(x => x.topics.length);
+
+        if (latestWithTopics) {
+          const topicText = latestWithTopics.topics.join(", ");
+          const dateLabel = latestWithTopics.date ? ` (${latestWithTopics.date})` : "";
+          return `${name}, ${topicText}${dateLabel};`;
+        }
     return `${name}, NO TOPIC FOUND;`;
   }).filter(Boolean);
   return results.join("\n");
@@ -103,6 +111,11 @@ runBtn.addEventListener("click", async () => {
   const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
   const thirtyMinsFromNow = new Date(now.getTime() + 30 * 60000);
 
+  if (!els.startDate.value || !els.startTime.value || !els.dueDate.value || !els.dueTime.value) {
+    statusEl.textContent = "⚠️ Please fill in all date and time fields.";
+    statusEl.style.color = "red";
+    return;
+  }
   if (selectedStart < thirtyMinsFromNow) {
     statusEl.textContent = "⚠️ Start time must be at least 30 mins in future.";
     statusEl.style.color = "red";
