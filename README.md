@@ -23,36 +23,37 @@
 
 1. Press the Green Code button and download the Zip file.
 
-   ![alt text](readme-pics/image-2.png)
+   <p align="center"> <img src="readme-pics/image-2.png" alt="alt text"> </p>
 
 2. Open Chrome and press the 3 dots at the top.
-   ![alt text](readme-pics/image-3.png)
+
+   <p align="center"> <img src="readme-pics/image-3.png" alt="alt text"> </p>
 
 3. Enable **Developer mode** (toggle in the top right).
 
-   ![alt text](readme-pics/image-6.png)
+   <p align="center"> <img src="readme-pics/image-6.png" alt="alt text"> </p>
 
 4. From your downloads folder, unzip the file.
 
-   ![alt text](readme-pics/image-7.png)
+   <p align="center"> <img src="readme-pics/image-7.png" alt="alt text"> </p>
 
 5. Drag and drop the unzipped folder onto Chrome.
 
-   ![alt text](readme-pics/image-9.png)
+   <p align="center"> <img src="readme-pics/image-9.png" alt="alt text"> </p>
 
 6. You should now see the extension sucessfully loaded.
 
-   ![alt text](readme-pics/image-10.png)
+   <p align="center"> <img src="readme-pics/image-10.png" alt="alt text"> </p>
 
 7. Finally, click the extensions logo on the top right and pin the extension.
 
-   ![alt text](readme-pics/image-11.png)
+   <p align="center"> <img src="readme-pics/image-11.png" alt="alt text"> </p>
 
 ## How to Use
 
 ### 1. Inputting your Students
 
-![alt text](readme-pics/image-13.png)
+<p align="center"> <img src="readme-pics/image-13.png" alt="alt text"> </p>
 
 Input your student data into the textarea using the following formats:
 
@@ -65,11 +66,11 @@ Inputs are not case sensitive, they will automatically be capitalised once assig
 
 If you are feeling lazy you can also head over to TNX and a new button will appear. The button copies over all of your student info on the current day to your clipboard. You can then paste the info into the student textbox. For any students that did not get a TNX report on your current day, it will return the latest report it finds along with the date it was written.
 
-![alt text](readme-pics/image-23.png)
+<p align="center"> <img src="readme-pics/image-23.png" alt="alt text"> </p>
 
 For any students that did not get a TNX report on the current day, it will return the latest report it finds along with the date it was written.
 
-![alt text](readme-pics/image-24.png)
+<p align="center"> <img src="readme-pics/image-24.png" alt="alt text"> </p>
 
 **Maths/English Example:**
 
@@ -90,7 +91,7 @@ Afsheen Jahan, Energy, phy, ks3;
 
 ### 2. Editing Assingnment Details
 
-![alt text](readme-pics/image-15.png)
+<p align="center"> <img src="readme-pics/image-15.png" alt="alt text"> </p>
 
 Once you have inputted your students, you must fill out the assignment details.
 
@@ -102,16 +103,16 @@ The extension can also automatically create the nugget assignments for you if th
 
 Finally, you can press the button to create assignments. Once the button is pressed do not not click away or move to another tab. This will the cause the extension to stop.
 
-![alt text](readme-pics/image.png)
+<p align="center"> <img src="readme-pics/image.png" alt="alt text"> </p>
 
 #### Cancellation
 
 If you've made a mistake in your input, you can press the 'Stop Automation' to stop your tasks from running.
 
-![alt text](readme-pics/image-18.png)
+<p align="center"> <img src="readme-pics/image-18.png" alt="alt text"> </p>
 
 #### Completion
 
 Once your task is done, AutoCentury will notify you and it is now safe to click away.
 
-![alt text](readme-pics/image-1.png)
+<p align="center"> <img src="readme-pics/image-1.png" alt="alt text"> </p>
