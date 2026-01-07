@@ -62,7 +62,7 @@ Inputs are not case sensitive, they will automatically be capitalised once assig
 
 #### TNX scrape
 
-If you are feeling lazy you can also head over to TNX and a new button will appear. The button copies over all of your student info on the current day to your clipboard. You can then paste the info into the student textbox. For any students that did not get a TNX report on your current day, it will return the latest report it finds along with the date it was written.
+If you are feeling lazy you can also head over to TNX and a new button will appear. The button copies over all of your student info on the current day to your clipboard. You can then paste the info into the student textbox.
 
 <p align="center"> <img src="readme-pics/image-23.png" alt="alt text"> </p>
 
