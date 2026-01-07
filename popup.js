@@ -198,7 +198,7 @@ chrome.runtime.onMessage.addListener((msg) => {
     statusEl.style.color = "orange";
   }
   if (msg.type === "BATCH_COMPLETE") {
-    statusEl.textContent = "✅ Done!";
+    statusEl.textContent = "✅ All Assignments Done!";
     statusEl.style.color = "green";
   }
 });
