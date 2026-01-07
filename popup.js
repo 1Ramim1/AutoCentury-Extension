@@ -204,7 +204,16 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 document.getElementById("stop").addEventListener("click", async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    // 1. Clear storage immediately
     await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
+    
+    // 2. Tell content script to ABORT current waitFor loops
+    if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { type: "STOP_AUTOMATION" }).catch(() => {});
+    }
+
     statusEl.textContent = "Stopped.";
     statusEl.style.color = "red";
 });

@@ -189,6 +189,10 @@
             window.location.reload(); 
         }
       } catch (e) {
+        if (e.message === "Aborted") {
+            console.log("Automation stopped by user.");
+            return;
+        }
         if (e.message === "SKIP_STUDENT" || e.message === "SKIP_NUGGET") {
            const msgText = e.message === "SKIP_STUDENT" 
              ? `⚠️ Skipping Student: "${current.name}" not found` 
@@ -200,7 +204,6 @@
            await chrome.storage.local.set({ "activeQueue": newQueue });
 
            if (e.message === "SKIP_NUGGET") {
-              // Dismiss the modal properly first
               const dismissBtn = document.querySelector('[data-testid="dismiss-button"]');
               if (dismissBtn) dismissBtn.click();
               await quickWait(500);
@@ -210,7 +213,7 @@
               if (backLink) pointerTap(backLink);
            }
 
-           await quickWait(1000); // dashboard delay
+           await quickWait(1000);
 
            if (newQueue.length === 0) {
                chrome.runtime.sendMessage({ type: "BATCH_COMPLETE" }).catch(() => {});
@@ -226,7 +229,7 @@
     if (msg.type === "START_BATCH") resumeBatch();
     if (msg.type === "STOP_AUTOMATION") {
         abortController.abort();
-        chrome.storage.local.set({ isPaused: true, activeQueue: [] });
+        chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
     }
   });
 
