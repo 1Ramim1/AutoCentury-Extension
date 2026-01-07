@@ -17,7 +17,7 @@
 - **Persistent Settings:** Remembers your preferred class days and subjects for faster workflow.
 - **Emergency Stop:** In the case of mistakes, it allows you to stop the automation without any hassle.
 
-## 🛠 Installation
+## Installation
 
 1. Press the Green Code button and download the Zip file.
 
