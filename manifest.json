@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Century Assignment Creator",
+  "name": "AutoCentury",
   "version": "1.0.0",
+  "description": "AutoCentury eliminates the manual repetitive work of creating individual assignments for students. You can copy students from TNX directly and assign them work.",
   "permissions": ["activeTab", "scripting", "storage", "clipboardWrite"],
   "host_permissions": [
     "https://app.century.tech/*",
@@ -9,6 +10,12 @@
   ],
   "action": {
     "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/auto-century-logo-16.png",
+    "32": "icons/auto-century-logo-32.png",
+    "48": "icons/auto-century-logo-48.png",
+    "128": "icons/auto-century-logo-128.png"
   },
   "content_scripts": [
     {
