@@ -1,7 +1,5 @@
 # AutoCentury
 
-**Automated Assignment Management for the Century Tech Website**
-
 ![JavaScript](https://img.shields.io/badge/language-javascript-yellow.svg)
 ![Manifest-V3](https://img.shields.io/badge/manifest-V3-blue.svg)
 ![Chrome-Extension](https://img.shields.io/badge/type-Chrome%20Extension-green.svg)
