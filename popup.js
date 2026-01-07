@@ -168,7 +168,7 @@ runBtn.addEventListener("click", async () => {
       startTime: els.startTime.value, 
       dueDate: els.dueDate.value, 
       dueTime: els.dueTime.value,
-      nuggetAutomation: els.nuggetAutomation.checked // Added to batch settings
+      nuggetAutomation: els.nuggetAutomation.checked 
     }, 
     "isPaused": false 
   });
