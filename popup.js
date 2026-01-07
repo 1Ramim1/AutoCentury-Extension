@@ -1,4 +1,3 @@
-// Added nuggetAutomation to the fields array
 const fields = ["day", "subject", "batchData", "startDate", "startTime", "dueDate", "dueTime", "nuggetAutomation"];
 const els = {};
 fields.forEach(id => els[id] = document.getElementById(id));
@@ -62,7 +61,6 @@ getInfoBtn.addEventListener("click", async () => {
 async function saveAllData() {
   const data = {};
   fields.forEach(id => {
-    // Logic to handle checkbox vs text/select
     if (els[id].type === "checkbox") {
       data[`saved_${id}`] = els[id].checked;
     } else {
@@ -100,7 +98,6 @@ runBtn.addEventListener("click", async () => {
     return;
   }
 
-  // --- Date Validation ---
   const now = new Date();
   const selectedStart = new Date(`${els.startDate.value}T${els.startTime.value}`);
   const selectedDue = new Date(`${els.dueDate.value}T${els.dueTime.value}`);
@@ -117,11 +114,9 @@ runBtn.addEventListener("click", async () => {
     return; 
   }
 
-  // --- Semicolon Parsing & Validation ---
   const rawData = els.batchData.value.trim();
   if (!rawData) return;
 
-  // Split by semicolon
   const blocks = rawData.split(';').map(b => b.trim()).filter(b => b !== "");
   const processedStudents = [];
   const isScience = (els.subject.value === "Science");
@@ -130,7 +125,6 @@ runBtn.addEventListener("click", async () => {
     const args = block.split(',').map(a => a.trim()).filter(a => a !== "");
     
     if (isScience) {
-      // REQUIRE 4 ARGS
       if (args.length !== 4) {
         statusEl.textContent = "⚠️ Format incorrect: Science requires 4 arguments per student.";
         statusEl.style.color = "red";
@@ -149,7 +143,6 @@ runBtn.addEventListener("click", async () => {
         return;
       }
     } else {
-      // REQUIRE 2 ARGS
       if (args.length !== 2) {
         statusEl.textContent = "⚠️ Format incorrect: Maths or English subjects require 2 arguments.";
         statusEl.style.color = "red";
@@ -206,10 +199,8 @@ chrome.runtime.onMessage.addListener((msg) => {
 document.getElementById("stop").addEventListener("click", async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    // 1. Clear storage immediately
     await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
     
-    // 2. Tell content script to ABORT current waitFor loops
     if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { type: "STOP_AUTOMATION" }).catch(() => {});
     }

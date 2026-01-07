@@ -102,7 +102,7 @@
         } else if (settings.subject === "Science" && studentData.scienceSub && studentData.scienceBoard) {
             const sub = studentData.scienceSub.toLowerCase();
             const board = studentData.scienceBoard.toLowerCase();
-            if (sub === 'bio') {
+            if (sub === 'bio'|| sub === 'biology') {
                 if (board === 'edexcel') targetCourseId = "6733d990-e454-402e-8972-0e25196521e5";
                 else if (board === 'aqa') targetCourseId = "cbdbbf43-46d3-49bf-904e-b8288c727394";
                 else if (board === 'ks3') targetCourseId = "b3df9fbf-0962-4439-bb89-7d0fcc887ca0";
