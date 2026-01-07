@@ -151,7 +151,7 @@ runBtn.addEventListener("click", async () => {
     } else {
       // REQUIRE 2 ARGS
       if (args.length !== 2) {
-        statusEl.textContent = "⚠️ Format incorrect: Standard subjects require 2 arguments.";
+        statusEl.textContent = "⚠️ Format incorrect: Maths or English subjects require 2 arguments.";
         statusEl.style.color = "red";
         return;
       }
