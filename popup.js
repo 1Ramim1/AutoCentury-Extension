@@ -95,7 +95,7 @@ runBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
   if (!tab.url.includes("app.century.tech/teach/assignments")) {
-    statusEl.textContent = "⚠️ Error: Wrong page.";
+    statusEl.textContent = "⚠️ Error: Wrong page";
     statusEl.style.color = "red";
     return;
   }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Solo - Assignment Student Picker",
-  "version": "1.0.1",
+  "name": "Century Assignment Creator",
+  "version": "1.0.0",
   "permissions": ["activeTab", "scripting", "storage", "clipboardWrite"],
   "host_permissions": [
     "https://app.century.tech/*",
