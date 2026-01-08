@@ -60,15 +60,9 @@ Input your student data into the textarea using the following formats:
 
 Inputs are not case sensitive, they will automatically be capitalised once assignments are created.
 
-#### TNX scrape
+#### Science Specifications/Exam boards
 
-If you are feeling lazy you can also head over to TNX and a new button will appear. The button copies over all of your student info on the current day to your clipboard. You can then paste the info into the student textbox.
-
-<p align="center"> <img src="readme-pics/image-23.png" alt="alt text"> </p>
-
-For any students that did not get a TNX report on the current day, it will return the latest report it finds along with the date it was written.
-
-<p align="center"> <img src="readme-pics/image-24.png" alt="alt text"> </p>
+Currently there are 4 options on Century: edexcel, aqa, ks3 and base (Century's stock course).
 
 **Maths/English Example:**
 
@@ -86,6 +80,16 @@ Maths and English do not require Exam Board selection. This is only required for
 Monesha Ahmed, Cells, bio, aqa;
 Afsheen Jahan, Energy, phy, ks3;
 ```
+
+#### TNX scrape
+
+If you are feeling lazy you can also head over to TNX and a new button will appear. The button copies over all of your student info of the current day to your clipboard. You can then paste the info into the student textbox.
+
+<p align="center"> <img src="readme-pics/image-23.png" alt="alt text"> </p>
+
+For any students that did not get a TNX report on the current day, it will return the latest report it finds along with the date it was written.
+
+<p align="center"> <img src="readme-pics/image-24.png" alt="alt text"> </p>
 
 ### 2. Editing Assingnment Details
 
