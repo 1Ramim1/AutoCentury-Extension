@@ -135,6 +135,12 @@ runBtn.addEventListener("click", async () => {
   const isScience = (els.subject.value === "Science");
 
   for (let block of blocks) {
+    if (!rawData.includes(block + ';')) {
+      statusEl.textContent = `⚠️ Format incorrect: Missing semicolon after "${block}"`;
+      statusEl.style.color = "red";
+      return;
+    }
+
     const args = block.split(',').map(a => a.trim()).filter(a => a !== "");
     
     if (isScience) {
