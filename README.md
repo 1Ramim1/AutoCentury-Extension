@@ -62,7 +62,7 @@ Inputs are not case sensitive, they will automatically be capitalised once assig
 
 #### Science Specifications/Exam boards
 
-Currently there are 4 options on Century: edexcel, aqa, ks3 and base (Century's stock course).
+Currently there are 4 options on Century: edexcel, aqa, ks3 and base (Century's stock course). Maths and English do not require Exam Board selection. This is only required for Science.
 
 **Maths/English Example:**
 
@@ -71,8 +71,6 @@ Zara Ferdous, Vectors;
 Samiul Miraj, Proof;
 Afsheen Jahan, Trigonometry;
 ```
-
-Maths and English do not require Exam Board selection. This is only required for Science.
 
 **Science Example:**
 
