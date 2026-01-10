@@ -105,6 +105,16 @@ Finally, you can press the button to create assignments. Once the button is pres
 
 <p align="center"> <img src="readme-pics/image.png" alt="alt text"> </p>
 
+#### Running Multiple Tasks
+
+You can run multiple assignments at once by writing the tasks one line after the other. 
+
+```text
+Samiul Miraj, moles, chem, edexcel;
+Monesha Ahmed, cells, bio, aqa;
+Afsheen Jahan, energy, phy, ks3;
+```
+
 #### Cancellation
 
 If you've made a mistake in your input, you can press the 'Stop Automation' to stop your tasks from running.
