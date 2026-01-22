@@ -6,6 +6,22 @@
 
 **AutoCentury** eliminates the manual repetitive work of creating individual assignments for students. You can copy students from TNX directly and assign them work. Instead of manually clicking through dozens of menus, AutoCentury handles student selection, topic searching, and exam board routing in seconds.
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Updates](#updating-autocentury)
+- [How to Use](#how-to-use)
+  - [1. Inputting your Students](#1-inputting-your-students)
+    - [Science Specifications/Exam boards](#science-specificationsexam-boards)
+    - [TNX scrape](#tnx-scrape)
+  - [2. Editing Assingnment Details](#2-editing-assingnment-details)
+    - [Nugget Automation](#nugget-automation)
+  - [3. Running your tasks](#2-running-your-tasks)
+    - [Running Multiple Tasks](#running-multiple-tasks)
+    - [Cancellation](#cancellation)
+    - [Completion](#completion)
+
 ## Features
 
 - **Batch Automation:** Process multiple students in a single run from a simple text input.
