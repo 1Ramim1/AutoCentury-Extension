@@ -17,7 +17,7 @@
     - [TNX scrape](#tnx-scrape)
   - [2. Editing Assingnment Details](#2-editing-assingnment-details)
     - [Nugget Automation](#nugget-automation)
-  - [3. Running your tasks](#2-running-your-tasks)
+  - [3. Running your tasks](#3-running-your-tasks)
     - [Running Multiple Tasks](#running-multiple-tasks)
     - [Cancellation](#cancellation)
     - [Completion](#completion)
@@ -119,7 +119,7 @@ Once you have inputted your students, you must fill out the assignment details.
 
 The extension can also automatically create the nugget assignments for you if the nuggets checkbox is ticked.
 
-### 2. Running your tasks
+### 3. Running your tasks
 
 Finally, you can press the button to create assignments. Once the button is pressed do not not click away or move to another tab. This will the cause the extension to stop.
 
