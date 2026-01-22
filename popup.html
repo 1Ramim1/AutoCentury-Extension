@@ -20,6 +20,15 @@
             padding: 16px;
         }
 
+        /* View Switching */
+        #mainView {
+            display: block;
+        }
+
+        #selectionView {
+            display: none;
+        }
+
         .header {
             text-align: center;
             padding-bottom: 12px;
@@ -155,6 +164,58 @@
             cursor: pointer;
         }
 
+        /* Student Selection Styles */
+        #studentList {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            margin-bottom: 12px;
+        }
+
+        .student-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #f3f4f6;
+            gap: 10px;
+        }
+
+        .student-item:last-child {
+            border-bottom: none;
+        }
+
+        .student-item input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .student-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #111827;
+            cursor: pointer;
+        }
+
+        .student-topic {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .date-tag {
+            font-weight: bold;
+            color: #e01f52;
+        }
+
         .status {
             margin-top: 12px;
             font-size: 12px;
@@ -166,7 +227,7 @@
 </head>
 
 <body>
-    <div class="container">
+    <div class="container" id="mainView">
         <div class="header">
             <h1 class="title">Auto<span>Century</span></h1>
             <span class="subtitle">By Ramim Mollah</span>
@@ -227,6 +288,19 @@
 
         <div class="status" id="status"></div>
     </div>
+
+    <div class="container" id="selectionView">
+        <div class="header">
+            <h1 class="title">Select <span>Students</span></h1>
+            <span class="subtitle">Only checked items will be copied</span>
+        </div>
+
+        <div id="studentList"></div>
+
+        <button id="confirmCopy" class="primary">Copy Selected</button>
+        <button id="cancelSelection" class="secondary">Go Back</button>
+    </div>
+
     <script src="popup.js"></script>
 </body>
 

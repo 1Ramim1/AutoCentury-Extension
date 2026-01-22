@@ -6,6 +6,11 @@ const statusEl = document.getElementById("status");
 const runBtn = document.getElementById("run");
 const getInfoBtn = document.getElementById("getInfo");
 
+// Copy and Main Dasboard
+const mainView = document.getElementById("mainView");
+const selectionView = document.getElementById("selectionView");
+const studentList = document.getElementById("studentList");
+
 async function checkUrl() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.url?.includes("tutor.tnx.dev/1/dashboard")) {
@@ -16,54 +21,100 @@ async function checkUrl() {
 }
 
 function scrapeStudentData() {
-  console.log("Scraping students...");
   const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
+  
   function getTopicsFromSlide(slide) {
     if (!slide) return [];
     const topicDivs = Array.from(slide.querySelectorAll('div[class*="bg-secondary"][class*="leading-tight"]'));
-    const topics = topicDivs.map(d => d.textContent.trim()).filter(Boolean);
-    return [...new Set(topics)];
+    return [...new Set(topicDivs.map(d => d.textContent.trim()).filter(Boolean))];
   }
+
   function getSlideDateLabel(slide) {
     if (!slide) return null;
     const dateSpan = slide.querySelector('span[title][class*="truncate"]') || slide.querySelector('span[title]');
     return dateSpan ? dateSpan.textContent.trim() : null;
   }
-  const results = studentLis.map(li => {
+
+  return studentLis.map(li => {
     const nameEl = li.querySelector("span.truncate.inline-block");
     if (!nameEl) return null;
     const name = nameEl.getAttribute("title") || nameEl.textContent.trim();
     const slides = Array.from(li.querySelectorAll(".swiper-slide"));
+    
     const todaySlide = slides.find(s => s.textContent.includes("Today"));
     const todayTopics = getTopicsFromSlide(todaySlide);
-    if (todayTopics.length) return `${name}, ${todayTopics.join(", ")};`;
-    if (todayTopics.length) return `${name}, ${todayTopics.join(", ")};`;
+    
+    let topics = todayTopics;
+    let dateLabel = "Today";
 
-        const latestWithTopics = slides.map(slide => ({ 
-          slide, 
-          topics: getTopicsFromSlide(slide),
-          date: getSlideDateLabel(slide) 
-        })).find(x => x.topics.length);
+    if (!topics.length) {
+      const latest = slides.map(s => ({ s, t: getTopicsFromSlide(s) })).find(x => x.t.length);
+      if (latest) {
+        topics = latest.t;
+        dateLabel = getSlideDateLabel(latest.s) || "Previous";
+      }
+    }
 
-        if (latestWithTopics) {
-          const topicText = latestWithTopics.topics.join(", ");
-          const dateLabel = latestWithTopics.date ? ` (${latestWithTopics.date})` : "";
-          return `${name}, ${topicText}${dateLabel};`;
-        }
-    return `${name}, NO TOPIC FOUND;`;
+    return {
+      name,
+      topic: topics.length ? topics.join(", ") : "NO TOPIC FOUND",
+      date: dateLabel
+    };
   }).filter(Boolean);
-  return results.join("\n");
 }
 
+// This is for the copy dashboard and handles copy selection
 getInfoBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
-    navigator.clipboard.writeText(injectionResults[0].result).then(() => {
-      statusEl.textContent = "✅ Info copied!";
-      statusEl.style.color = "green";
-      setTimeout(() => { statusEl.textContent = ""; }, 3000);
+    const scrapedData = injectionResults[0].result;
+    
+    studentList.innerHTML = ""; // Clears Existing
+    
+    scrapedData.forEach((student, index) => {
+      const item = document.createElement("div");
+      item.className = "student-item";
+      item.innerHTML = `
+        <input type="checkbox" id="st-${index}" checked 
+               data-name="${student.name}" 
+               data-topic="${student.topic}" 
+               data-date="${student.date}">
+        <div class="student-info">
+            <label for="st-${index}" class="student-name">${student.name}</label>
+            <span class="student-topic">${student.topic} — <span class="date-tag">${student.date}</span></span>
+        </div>
+      `;
+      studentList.appendChild(item);
     });
+
+    mainView.style.display = "none";
+    selectionView.style.display = "block";
   });
+});
+
+document.getElementById("confirmCopy").addEventListener("click", () => {
+  const selected = Array.from(studentList.querySelectorAll('input:checked'));
+  
+  const formattedText = selected.map(cb => {
+    const name = cb.dataset.name;
+    const topic = cb.dataset.topic;
+    const date = cb.dataset.date;
+    const dateSuffix = date !== "Today" ? ` (${date})` : "";
+    return `${name}, ${topic}${dateSuffix};`;
+  }).join("\n");
+
+  navigator.clipboard.writeText(formattedText).then(() => {
+    statusEl.textContent = `✅ ${selected.length} students copied!`;
+    statusEl.style.color = "green";
+    selectionView.style.display = "none";
+    mainView.style.display = "block";
+    setTimeout(() => { statusEl.textContent = ""; }, 3000);
+  });
+});
+
+document.getElementById("cancelSelection").addEventListener("click", () => {
+  selectionView.style.display = "none";
+  mainView.style.display = "block";
 });
 
 async function saveAllData() {
@@ -130,10 +181,17 @@ runBtn.addEventListener("click", async () => {
   const rawData = els.batchData.value.trim();
   if (!rawData) return;
 
+  if (!rawData.endsWith(';')) {
+    statusEl.textContent = "⚠️ Error: Every entry must end with a semicolon (;)";
+    statusEl.style.color = "red";
+    return;
+  }
+
   const blocks = rawData.split(';').map(b => b.trim()).filter(b => b !== "");
   const processedStudents = [];
   const isScience = (els.subject.value === "Science");
 
+  // Right now this error code doesn't work in any scenario. Need to check further.
   for (let block of blocks) {
     if (!rawData.includes(block + ';')) {
       statusEl.textContent = `⚠️ Format incorrect: Missing semicolon after "${block}"`;
@@ -170,8 +228,9 @@ runBtn.addEventListener("click", async () => {
     }
 
     processedStudents.push({ 
-      name: args[0], 
-      topic: args[1], 
+      name: args[0],
+      topic: args[1],  
+      // topic: args[1].split('(')[0].trim(), would auto ignore the date if left behind 
       scienceSub: isScience ? args[2] : null, 
       scienceBoard: isScience ? args[3] : null 
     });
@@ -217,13 +276,10 @@ chrome.runtime.onMessage.addListener((msg) => {
 
 document.getElementById("stop").addEventListener("click", async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    
     await chrome.storage.local.set({ "activeQueue": [], "isPaused": true });
-    
     if (tab?.id) {
         chrome.tabs.sendMessage(tab.id, { type: "STOP_AUTOMATION" }).catch(() => {});
     }
-
     statusEl.textContent = "Stopped.";
     statusEl.style.color = "red";
 });
