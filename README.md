@@ -47,6 +47,10 @@
 
    <p align="center"> <img src="readme-pics/image-11.png" alt="alt text"> </p>
 
+## Updating AutoCentury
+
+For updates, delete your previous AutoCentury folder and install the application again.
+
 ## How to Use
 
 ### 1. Inputting your Students
