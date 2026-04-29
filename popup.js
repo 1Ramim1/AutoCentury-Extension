@@ -20,58 +20,145 @@ async function checkUrl() {
   }
 }
 
-function scrapeStudentData() {
-  const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
+// function scrapeStudentData() {
+//   const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
   
-  function getTopicsFromSlide(slide) {
-    if (!slide) return [];
-    const topicDivs = Array.from(slide.querySelectorAll('div[class*="bg-secondary"][class*="leading-tight"]'));
-    return [...new Set(topicDivs.map(d => d.textContent.trim()).filter(Boolean))];
-  }
+//   function getTopicsFromSlide(slide) {
+//     if (!slide) return [];
+//     const topicDivs = Array.from(slide.querySelectorAll('div[class*="bg-secondary"][class*="leading-tight"]'));
+//     return [...new Set(topicDivs.map(d => d.textContent.trim()).filter(Boolean))];
+//   }
 
-  function getSlideDateLabel(slide) {
-    if (!slide) return null;
-    const dateSpan = slide.querySelector('span[title][class*="truncate"]') || slide.querySelector('span[title]');
-    return dateSpan ? dateSpan.textContent.trim() : null;
-  }
+//   function getSlideDateLabel(slide) {
+//     if (!slide) return null;
+//     const dateSpan = slide.querySelector('span[title][class*="truncate"]') || slide.querySelector('span[title]');
+//     return dateSpan ? dateSpan.textContent.trim() : null;
+//   }
 
-  return studentLis.map(li => {
-    const nameEl = li.querySelector("span.truncate.inline-block");
-    if (!nameEl) return null;
-    const name = nameEl.getAttribute("title") || nameEl.textContent.trim();
-    const slides = Array.from(li.querySelectorAll(".swiper-slide"));
+//   return studentLis.map(li => {
+//     const nameEl = li.querySelector("span.truncate.inline-block");
+//     if (!nameEl) return null;
+//     const name = nameEl.getAttribute("title") || nameEl.textContent.trim();
+//     const slides = Array.from(li.querySelectorAll(".swiper-slide"));
     
-    const todaySlide = slides.find(s => s.textContent.includes("Today"));
-    const todayTopics = getTopicsFromSlide(todaySlide);
+//     const todaySlide = slides.find(s => s.textContent.includes("Today"));
+//     const todayTopics = getTopicsFromSlide(todaySlide);
     
-    let topics = todayTopics;
-    let dateLabel = "Today";
+//     let topics = todayTopics;
+//     let dateLabel = "Today";
 
-    if (!topics.length) {
-      const latest = slides.map(s => ({ s, t: getTopicsFromSlide(s) })).find(x => x.t.length);
-      if (latest) {
-        topics = latest.t;
-        dateLabel = getSlideDateLabel(latest.s) || "Previous";
+//     if (!topics.length) {
+//       const latest = slides.map(s => ({ s, t: getTopicsFromSlide(s) })).find(x => x.t.length);
+//       if (latest) {
+//         topics = latest.t;
+//         dateLabel = getSlideDateLabel(latest.s) || "Previous";
+//       }
+//     }
+
+//     return {
+//       name,
+//       topic: topics.length ? topics.join(", ") : "NO TOPIC FOUND",
+//       date: dateLabel
+//     };
+//   }).filter(Boolean);
+// }
+
+// // This is for the copy dashboard and handles copy selection
+// getInfoBtn.addEventListener("click", async () => {
+//   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+//   chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
+//     const scrapedData = injectionResults[0].result;
+    
+//     studentList.innerHTML = ""; // Clears Existing
+    
+//     scrapedData.forEach((student, index) => {
+//       const item = document.createElement("div");
+//       item.className = "student-item";
+//       item.innerHTML = `
+//         <input type="checkbox" id="st-${index}" checked 
+//                data-name="${student.name}" 
+//                data-topic="${student.topic}" 
+//                data-date="${student.date}">
+//         <div class="student-info">
+//             <label for="st-${index}" class="student-name">${student.name}</label>
+//             <span class="student-topic">${student.topic} — <span class="date-tag">${student.date}</span></span>
+//         </div>
+//       `;
+//       studentList.appendChild(item);
+//     });
+
+//     mainView.style.display = "none";
+//     selectionView.style.display = "block";
+//   });
+// });
+
+// ... (Top constants and checkUrl function remain unchanged)
+
+function scrapeStudentData() {
+  const hourSections = Array.from(document.querySelectorAll('div.bg-card.flex-col.space-y-3'));
+  const allResults = [];
+
+  hourSections.forEach(section => {
+    // Scrape the time range (e.g., 12:15 - 13:15)
+    const timeEl = section.querySelector('p.text-sm.text-muted-foreground');
+    const timeFull = timeEl ? timeEl.textContent.split('(')[0].trim() : "Unknown Time";
+    const startTime = timeFull.split('-')[0].trim(); // Used for sorting
+
+    const studentLis = Array.from(section.querySelectorAll('ul.space-y-4 > li'));
+
+    studentLis.forEach(li => {
+      const nameEl = li.querySelector("span.truncate.inline-block");
+      if (!nameEl) return;
+      const name = nameEl.getAttribute("title") || nameEl.textContent.trim();
+      const slides = Array.from(li.querySelectorAll(".swiper-slide"));
+      
+      const getTopics = (s) => [...new Set(Array.from(s?.querySelectorAll('div[class*="bg-secondary"]') || []).map(d => d.textContent.trim()).filter(Boolean))];
+      const getDate = (s) => s?.querySelector('span[title]')?.textContent.trim();
+
+      const todaySlide = slides.find(s => s.textContent.includes("Today"));
+      const todayTopics = getTopics(todaySlide);
+      
+      let topics = todayTopics;
+      let dateLabel = "Today";
+
+      if (!topics.length) {
+        const latest = slides.map(s => ({ s, t: getTopics(s) })).find(x => x.t.length);
+        if (latest) { topics = latest.t; dateLabel = getDate(latest.s) || "Previous"; }
       }
-    }
 
-    return {
-      name,
-      topic: topics.length ? topics.join(", ") : "NO TOPIC FOUND",
-      date: dateLabel
-    };
-  }).filter(Boolean);
+      allResults.push({
+        name,
+        topic: topics.length ? topics.join(", ") : "NO TOPIC FOUND",
+        date: dateLabel,
+        timeLabel: timeFull,
+        sortTime: startTime
+      });
+    });
+  });
+  return allResults;
 }
 
-// This is for the copy dashboard and handles copy selection
 getInfoBtn.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
     const scrapedData = injectionResults[0].result;
     
-    studentList.innerHTML = ""; // Clears Existing
+    // 1. Sort data by start time ascending
+    scrapedData.sort((a, b) => a.sortTime.localeCompare(b.sortTime));
     
+    studentList.innerHTML = ""; 
+    let lastTime = null;
+
     scrapedData.forEach((student, index) => {
+      // 2. Add a Header if the time block changes
+      if (student.timeLabel !== lastTime) {
+        const header = document.createElement("div");
+        header.className = "time-group-header";
+        header.textContent = student.timeLabel;
+        studentList.appendChild(header);
+        lastTime = student.timeLabel;
+      }
+
       const item = document.createElement("div");
       item.className = "student-item";
       item.innerHTML = `
@@ -91,6 +178,7 @@ getInfoBtn.addEventListener("click", async () => {
     selectionView.style.display = "block";
   });
 });
+// ... (Rest of the file remains exactly the same)
 
 document.getElementById("confirmCopy").addEventListener("click", () => {
   const selected = Array.from(studentList.querySelectorAll('input:checked'));
