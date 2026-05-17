@@ -20,80 +20,6 @@ async function checkUrl() {
   }
 }
 
-// function scrapeStudentData() {
-//   const studentLis = Array.from(document.querySelectorAll('ul.space-y-4 > li'));
-  
-//   function getTopicsFromSlide(slide) {
-//     if (!slide) return [];
-//     const topicDivs = Array.from(slide.querySelectorAll('div[class*="bg-secondary"][class*="leading-tight"]'));
-//     return [...new Set(topicDivs.map(d => d.textContent.trim()).filter(Boolean))];
-//   }
-
-//   function getSlideDateLabel(slide) {
-//     if (!slide) return null;
-//     const dateSpan = slide.querySelector('span[title][class*="truncate"]') || slide.querySelector('span[title]');
-//     return dateSpan ? dateSpan.textContent.trim() : null;
-//   }
-
-//   return studentLis.map(li => {
-//     const nameEl = li.querySelector("span.truncate.inline-block");
-//     if (!nameEl) return null;
-//     const name = nameEl.getAttribute("title") || nameEl.textContent.trim();
-//     const slides = Array.from(li.querySelectorAll(".swiper-slide"));
-    
-//     const todaySlide = slides.find(s => s.textContent.includes("Today"));
-//     const todayTopics = getTopicsFromSlide(todaySlide);
-    
-//     let topics = todayTopics;
-//     let dateLabel = "Today";
-
-//     if (!topics.length) {
-//       const latest = slides.map(s => ({ s, t: getTopicsFromSlide(s) })).find(x => x.t.length);
-//       if (latest) {
-//         topics = latest.t;
-//         dateLabel = getSlideDateLabel(latest.s) || "Previous";
-//       }
-//     }
-
-//     return {
-//       name,
-//       topic: topics.length ? topics.join(", ") : "NO TOPIC FOUND",
-//       date: dateLabel
-//     };
-//   }).filter(Boolean);
-// }
-
-// // This is for the copy dashboard and handles copy selection
-// getInfoBtn.addEventListener("click", async () => {
-//   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-//   chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scrapeStudentData }, (injectionResults) => {
-//     const scrapedData = injectionResults[0].result;
-    
-//     studentList.innerHTML = ""; // Clears Existing
-    
-//     scrapedData.forEach((student, index) => {
-//       const item = document.createElement("div");
-//       item.className = "student-item";
-//       item.innerHTML = `
-//         <input type="checkbox" id="st-${index}" checked 
-//                data-name="${student.name}" 
-//                data-topic="${student.topic}" 
-//                data-date="${student.date}">
-//         <div class="student-info">
-//             <label for="st-${index}" class="student-name">${student.name}</label>
-//             <span class="student-topic">${student.topic} — <span class="date-tag">${student.date}</span></span>
-//         </div>
-//       `;
-//       studentList.appendChild(item);
-//     });
-
-//     mainView.style.display = "none";
-//     selectionView.style.display = "block";
-//   });
-// });
-
-// ... (Top constants and checkUrl function remain unchanged)
-
 function scrapeStudentData() {
   const hourSections = Array.from(document.querySelectorAll('div.bg-card.flex-col.space-y-3'));
   const allResults = [];
@@ -149,6 +75,9 @@ getInfoBtn.addEventListener("click", async () => {
     studentList.innerHTML = ""; 
     let lastTime = null;
 
+    // Reset toggle button text when opening the view
+    document.getElementById("toggleAll").textContent = "Deselect All";
+
     scrapedData.forEach((student, index) => {
       // 2. Add a Header if the time block changes
       if (student.timeLabel !== lastTime) {
@@ -178,7 +107,16 @@ getInfoBtn.addEventListener("click", async () => {
     selectionView.style.display = "block";
   });
 });
-// ... (Rest of the file remains exactly the same)
+
+document.getElementById("toggleAll").addEventListener("click", (e) => {
+    const checkboxes = studentList.querySelectorAll('input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+    
+    // Toggle button text dynamically
+    e.target.textContent = allChecked ? "Select All" : "Deselect All";
+});
 
 document.getElementById("confirmCopy").addEventListener("click", () => {
   const selected = Array.from(studentList.querySelectorAll('input:checked'));
@@ -186,9 +124,11 @@ document.getElementById("confirmCopy").addEventListener("click", () => {
   const formattedText = selected.map(cb => {
     const name = cb.dataset.name;
     const topic = cb.dataset.topic;
-    const date = cb.dataset.date;
-    const dateSuffix = date !== "Today" ? ` (${date})` : "";
-    return `${name}, ${topic}${dateSuffix};`;
+    // const date = cb.dataset.date;
+    // const dateSuffix = date !== "Today" ? ` (${date})` : "";
+  //   return `${name}, ${topic}${dateSuffix};`;
+  // }).join("\n");
+    return `${name}, ${topic};`;
   }).join("\n");
 
   navigator.clipboard.writeText(formattedText).then(() => {
