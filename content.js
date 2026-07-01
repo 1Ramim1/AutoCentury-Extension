@@ -41,7 +41,8 @@
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       if (signal?.aborted) throw new Error("Aborted");
-      const row = modal.querySelector('tbody tr.rc-table-row-clickable');
+      // CHANGED: Updated class target name from legacy 'rc-' to modern 'cds-' layout rule
+      const row = modal.querySelector('tbody tr.cds-table-row-clickable');
       const noData = modal.querySelector('.no-data-message');
       if (row) return { found: true, element: row };
       if (noData) return { found: false };
@@ -59,12 +60,10 @@
     
     const modal = await waitFor('[role="dialog"]', 10000, document, signal);
     
-    // CHANGED: Simplified selector to work with Century's structural design update
     const search = await waitFor('[data-testid="search-input"]', 5000, modal, signal);
     
     setNativeValue(search, studentName);
     
-    // CHANGED: Dynamic parent tree target to locate the search submission button safely
     modal.querySelector('[data-testid="search-btn"]')?.click();
     
     const result = await waitForSearchResult(modal, 15000, signal);
@@ -77,7 +76,8 @@
       throw new Error("SKIP_STUDENT");
     }
 
-    pointerTap(result.element.querySelector("label.cds-checkbox__input-label") || result.element);
+    // CHANGED: Fallback directly to the row-level inner layout checkbox wrapper safely
+    pointerTap(result.element.querySelector(".cds-checkbox__label-layout") || result.element.querySelector("input[type='checkbox']") || result.element);
     (await waitFor('[data-testid="next-button"]', 5000, modal, signal)).click();
 
     const newAssignmentName = `${capitalize(studentName)} - ${capitalize(topic)} HW - ${settings.day.substring(0, 3)} Class`;
