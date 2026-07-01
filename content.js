@@ -58,10 +58,14 @@
     (await waitFor('[data-testid="for-students-button"]', 10000, document, signal)).click();
     
     const modal = await waitFor('[role="dialog"]', 10000, document, signal);
-    const search = await waitFor('.rc-search-box--large [data-testid="search-input"]', 5000, modal, signal);
+    
+    // CHANGED: Simplified selector to work with Century's structural design update
+    const search = await waitFor('[data-testid="search-input"]', 5000, modal, signal);
     
     setNativeValue(search, studentName);
-    modal.querySelector('.rc-search-box--large [data-testid="search-btn"]')?.click();
+    
+    // CHANGED: Dynamic parent tree target to locate the search submission button safely
+    modal.querySelector('[data-testid="search-btn"]')?.click();
     
     const result = await waitForSearchResult(modal, 15000, signal);
 
