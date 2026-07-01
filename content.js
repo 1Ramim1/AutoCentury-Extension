@@ -41,7 +41,6 @@
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       if (signal?.aborted) throw new Error("Aborted");
-      // CHANGED: Updated class target name from legacy 'rc-' to modern 'cds-' layout rule
       const row = modal.querySelector('tbody tr.cds-table-row-clickable');
       const noData = modal.querySelector('.no-data-message');
       if (row) return { found: true, element: row };
@@ -76,7 +75,6 @@
       throw new Error("SKIP_STUDENT");
     }
 
-    // CHANGED: Fallback directly to the row-level inner layout checkbox wrapper safely
     pointerTap(result.element.querySelector(".cds-checkbox__label-layout") || result.element.querySelector("input[type='checkbox']") || result.element);
     (await waitFor('[data-testid="next-button"]', 5000, modal, signal)).click();
 
@@ -145,7 +143,11 @@
         if (searchBtn) searchBtn.click(); else nInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
         
         await quickWait(2000);
-        const check = document.querySelector('tbody tr.rc-table-row-clickable label.cds-checkbox__input-label');
+        
+        // CHANGED: Fixed the class naming convention to align with the new 'cds-' structure for tables and inputs
+        const check = document.querySelector('tbody tr.cds-table-row-clickable .cds-checkbox__label-layout') || 
+                      document.querySelector('tbody tr.cds-table-row-clickable input[type="checkbox"]');
+                      
         if (check) {
             pointerTap(check);
             await quickWait(1200);
