@@ -42,7 +42,7 @@
     while (Date.now() - start < timeoutMs) {
       if (signal?.aborted) throw new Error("Aborted");
       const row = modal.querySelector('tbody tr.cds-table-row-clickable');
-      const noData = modal.querySelector('.no-data-message');
+      const noData = modal.querySelector('.cds-no-data-message');
       if (row) return { found: true, element: row };
       if (noData) return { found: false };
       await new Promise(r => setTimeout(r, 100));
